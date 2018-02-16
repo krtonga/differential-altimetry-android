@@ -4,20 +4,56 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="16dp"
     tools:context="krtonga.github.io.differentialaltimetryandroid.feature.list.MainActivity">
 
     <Button
         android:id="@+id/btn_start_arduino"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Start Arduino"/>
+        android:layout_margin="16dp"
+        android:text="@string/start_arduino"
+        app:layout_constraintTop_toTopOf="parent" />
 
     <android.support.v7.widget.RecyclerView
         android:id="@+id/rv_measurements"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        app:layout_constraintTop_toBottomOf="@+id/btn_start_arduino">
+        android:padding="16dp"
+        app:layout_constraintBottom_toTopOf="@id/btn_toggle_console"
+        app:layout_constraintTop_toBottomOf="@+id/btn_start_arduino"
+        app:layout_constraintVertical_chainStyle="spread_inside" />
 
-    </android.support.v7.widget.RecyclerView>
+    <TextView
+        android:id="@+id/btn_toggle_console"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/colorAccent"
+        android:fontFamily="monospace"
+        android:gravity="start"
+        android:padding="5dp"
+        android:text="@string/console_log"
+        android:textAlignment="textStart"
+        android:textColor="#FFFFFF"
+        android:textSize="10sp"
+        app:layout_constraintBottom_toTopOf="@id/scrl_console"
+        app:layout_constraintTop_toBottomOf="@id/rv_measurements" />
+
+    <ScrollView
+        android:id="@+id/scrl_console"
+        android:layout_width="match_parent"
+        android:layout_height="150dp"
+        android:background="#FFFFFF"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent">
+
+        <TextView
+            android:id="@+id/console"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="monospace"
+            android:padding="5dp"
+            android:textSize="10sp" />
+
+    </ScrollView>
+
 </android.support.constraint.ConstraintLayout>
