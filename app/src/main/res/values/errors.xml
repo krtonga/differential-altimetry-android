@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="error_no_usb_connected">No USB devices are connected</string>
+    <string name="error_no_permission">Permission to connect via USB was denied</string>
+    <string name="error_usb_disconnect">Permission to connect via USB was denied</string>
+    <string name="error_cdc_driver_error">CDC Driver is not working as expected</string>
+    <string name="error_device_error">USB device is not working as expected</string>
+    <string name="error_cts_disconnect">CTS has disconnected</string>
+    <string name="error_dsr_disconnect">DSR has disconnected</string>
+    <string name="error_usb_not_supported">There is no OTG driver for the given device</string>
+</resources>

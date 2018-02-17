@@ -2,5 +2,6 @@
     <string name="app_name">DifferentialAltimetryAndroid</string>
     <string name="start_arduino">Start Arduino</string>
     <string name="stop_arduino">Stop Arduino</string>
+    <string name="arduino_stopped">Arduino stopped.</string>
     <string name="console_log">CONSOLE LOG</string>
 </resources>
