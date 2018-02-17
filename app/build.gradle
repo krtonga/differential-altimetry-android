@@ -43,6 +43,8 @@ dependencies {
 
     implementation 'com.github.felHR85:UsbSerial:4.5.2'
 
+    api 'com.google.android.gms:play-services-location:11.8.0'
+
     implementation "android.arch.persistence.room:runtime:$room_version"
     implementation "android.arch.persistence.room:rxjava2:$room_version"
     kapt "android.arch.persistence.room:compiler:$room_version"
