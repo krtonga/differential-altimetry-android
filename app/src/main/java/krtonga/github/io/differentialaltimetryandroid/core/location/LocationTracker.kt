@@ -3,7 +3,6 @@ package krtonga.github.io.differentialaltimetryandroid.core.location
 import android.app.Activity
 
 import android.app.AlertDialog
-import android.content.DialogInterface
 import android.content.IntentSender
 import android.location.Location
 import android.os.Build
@@ -12,53 +11,62 @@ import android.support.v4.app.ActivityCompat
 import android.support.v4.content.ContextCompat
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.api.GoogleApiClient
-import com.google.android.gms.common.api.ResultCallback
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationServices
-import com.google.android.gms.location.LocationSettingsResult
+import com.google.android.gms.location.LocationSettingsRequest
+import com.jakewharton.rxrelay2.BehaviorRelay
+import timber.log.Timber
 
-class LocationTracker(private val mActivity: Activity) : GoogleApiClient.ConnectionCallbacks,
-                                                GoogleApiClient.OnConnectionFailedListener,
-                                                com.google.android.gms.location.LocationListener {
+class LocationTracker
+    : GoogleApiClient.ConnectionCallbacks,
+        GoogleApiClient.OnConnectionFailedListener,
+        com.google.android.gms.location.LocationListener {
 
-    private var mGoogleApiClient: GoogleApiClient? = null
-    private var mChangeListener: LocationTracker.LocationListener? = null
-    lateinit var  mLocationRequest: LocationRequest
+    private lateinit var mActivity: Activity
+    private lateinit var mPermissionListener: LocationPermissionListener
+
+    private val  mLocationRequest: LocationRequest by lazy { createLocationRequest() }
+    private val mGoogleApiClient: GoogleApiClient by lazy { buildGoogleApiClient() }
+
+    private val recentLocationRelay = BehaviorRelay.createDefault<Location>(Location(""))
+    val mostRecentLocation = recentLocationRelay.hide()
 
     companion object {
-        private val MY_PERMISSIONS_REQUEST_LOCATION = 99
+        private val PERMISSION_LOCATION = 99
     }
 
-    fun start(listener: LocationTracker.LocationListener) {
-        this.mChangeListener = listener
+    fun start(activity: Activity, permissionListener: LocationPermissionListener) {
+        mActivity = activity
+        mPermissionListener = permissionListener
+
         if (Build.VERSION.SDK_INT >= 23) {
-            if (this.appHasLocationPermission()) {
-                this.buildGoogleApiClient()
+            if (appHasLocationPermission()) {
+                mGoogleApiClient.connect()
             } else {
-                this.askForLocationPermission()
+                askForLocationPermission()
             }
         } else {
-            this.buildGoogleApiClient()
+            mGoogleApiClient.connect()
         }
 
     }
 
     fun onPause() {
-        if (this.mGoogleApiClient != null && this.mGoogleApiClient!!.isConnected()) {
-            LocationServices.FusedLocationApi.removeLocationUpdates(this.mGoogleApiClient, this)
+        if (mGoogleApiClient.isConnected) {
+            LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleApiClient, this)
         }
 
     }
 
     fun respondToActivityResult(requestCode: Int, resultCode: Int) {
-        if (requestCode == MY_PERMISSIONS_REQUEST_LOCATION) {
-            this.onPermissionsChange(resultCode == -1)
+        if (requestCode == PERMISSION_LOCATION) {
+            onPermissionsChange(resultCode == -1)
         }
     }
 
     fun respondToPermissions(requestCode: Int, grantResults: IntArray) {
-        if (requestCode == MY_PERMISSIONS_REQUEST_LOCATION) {
-            this.onPermissionsChange(grantResults.size > 0 && grantResults[0] == 0)
+        if (requestCode == PERMISSION_LOCATION) {
+            onPermissionsChange(grantResults.isNotEmpty() && grantResults[0] == 0)
         }
     }
 
@@ -67,48 +75,52 @@ class LocationTracker(private val mActivity: Activity) : GoogleApiClient.Connect
                 this.mActivity, "android.permission.ACCESS_FINE_LOCATION") == 0
     }
 
-    @Synchronized
-    private fun buildGoogleApiClient() {
-        this.mGoogleApiClient = GoogleApiClient.Builder(this.mActivity)
+    private fun buildGoogleApiClient() : GoogleApiClient {
+        return GoogleApiClient.Builder(this.mActivity)
                 .addConnectionCallbacks(this)
                 .addOnConnectionFailedListener(this)
-                .addApi(LocationServices.API).build()
-        this.mGoogleApiClient!!.connect()
+                .addApi(LocationServices.API)
+                .build()
     }
 
     private fun createLocationRequest(): LocationRequest {
-        val mLocationRequest = LocationRequest()
-        mLocationRequest.setInterval(10000L)
-        mLocationRequest.setFastestInterval(5000L)
-        mLocationRequest.setPriority(100)
-        return mLocationRequest
-    }
-
-    override fun onConnected(bundle: Bundle?) {
-        this.mLocationRequest = this.createLocationRequest()
-        val builder = com.google.android.gms.location.LocationSettingsRequest.Builder().addLocationRequest(this.mLocationRequest)
-        builder.setAlwaysShow(true)
-        val result = LocationServices.SettingsApi.checkLocationSettings(this.mGoogleApiClient, builder.build())
-        result.setResultCallback({ locationSettingsResult ->
-            val status = locationSettingsResult.getStatus()
-            val state = locationSettingsResult.getLocationSettingsStates()
-            when (status.getStatusCode()) {
-                0 -> this@LocationTracker.requestLocationUpdates()
-                6 -> try {
-                    status.startResolutionForResult(this@LocationTracker.mActivity, MY_PERMISSIONS_REQUEST_LOCATION)
-                } catch (var5: IntentSender.SendIntentException) {
-                }
-
-            }
-        })
+        val locationRequest = LocationRequest()
+        locationRequest.interval = 10000L
+        locationRequest.fastestInterval = 5000L
+        locationRequest.priority = 100
+        return locationRequest
     }
 
     private fun requestLocationUpdates() {
-        if (ContextCompat.checkSelfPermission(this.mActivity, "android.permission.ACCESS_FINE_LOCATION") == 0) {
-            LocationServices.FusedLocationApi.requestLocationUpdates(this.mGoogleApiClient, this.mLocationRequest, this)
-            System.out.println("Last location: " + LocationServices.FusedLocationApi.getLastLocation(this.mGoogleApiClient))
-        }
+        if (ContextCompat.checkSelfPermission(mActivity,
+                        "android.permission.ACCESS_FINE_LOCATION") == 0) {
+            LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient, mLocationRequest, this)
 
+            val latest: Location? = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient)
+            if (latest != null) {
+                recentLocationRelay.accept(latest)
+            }
+            //Timber.d("Last location: %s", recentLocationRelay.value)
+        }
+    }
+
+    override fun onConnected(bundle: Bundle?) {
+        Timber.d("Google Locations connected.")
+        val builder = LocationSettingsRequest.Builder().addLocationRequest(mLocationRequest)
+        builder.setAlwaysShow(true)
+        val result = LocationServices.SettingsApi.checkLocationSettings(
+                mGoogleApiClient, builder.build())
+
+        result.setResultCallback({ locationSettingsResult ->
+            val status = locationSettingsResult.status
+            when (status.statusCode) {
+                0 -> this@LocationTracker.requestLocationUpdates()
+                6 -> try {
+                    status.startResolutionForResult(this@LocationTracker.mActivity, PERMISSION_LOCATION)
+                } catch (var5: IntentSender.SendIntentException) {
+                }
+            }
+        })
     }
 
     override fun onConnectionSuspended(i: Int) {}
@@ -116,50 +128,50 @@ class LocationTracker(private val mActivity: Activity) : GoogleApiClient.Connect
     override fun onConnectionFailed(connectionResult: ConnectionResult) {}
 
     private fun askForLocationPermission() {
-        if (!this.appHasLocationPermission()) {
-            if (ActivityCompat.shouldShowRequestPermissionRationale(this.mActivity, "android.permission.ACCESS_FINE_LOCATION")
-                    && this.mChangeListener!!.permissionAlertTitle != null) {
-                AlertDialog.Builder(this.mActivity).setTitle(this.mChangeListener!!.permissionAlertTitle)
-                        .setMessage(this.mChangeListener!!.permissionAlertDescription)
-                        .setPositiveButton("OK") { dialogInterface, i ->
-                            ActivityCompat.requestPermissions(this@LocationTracker.mActivity, arrayOf("android.permission.ACCESS_FINE_LOCATION"), MY_PERMISSIONS_REQUEST_LOCATION)
+        if (!appHasLocationPermission()) {
+            if (ActivityCompat.shouldShowRequestPermissionRationale(
+                            mActivity, "android.permission.ACCESS_FINE_LOCATION")) {
+                AlertDialog.Builder(mActivity).setTitle(mPermissionListener.permissionAlertTitle)
+                        .setMessage(mPermissionListener.permissionAlertDescription)
+                        .setPositiveButton("OK") { _, _ ->
+                            ActivityCompat.requestPermissions(this@LocationTracker.mActivity,
+                                    arrayOf("android.permission.ACCESS_FINE_LOCATION"),
+                                    PERMISSION_LOCATION)
                         }
                         .create()
                         .show()
             } else {
-                ActivityCompat.requestPermissions(this.mActivity, arrayOf("android.permission.ACCESS_FINE_LOCATION"), MY_PERMISSIONS_REQUEST_LOCATION)
+                ActivityCompat.requestPermissions(mActivity,
+                        arrayOf("android.permission.ACCESS_FINE_LOCATION"), PERMISSION_LOCATION)
             }
         }
     }
 
     private fun onPermissionsChange(granted: Boolean) {
         if (granted) {
-            if (this.appHasLocationPermission()) {
-                if (this.mGoogleApiClient == null) {
-                    this.buildGoogleApiClient()
-                } else {
+            if (appHasLocationPermission()) {
+                if (!mGoogleApiClient.isConnected) {
+                    mGoogleApiClient.connect()
+                } else if (!mGoogleApiClient.isConnecting) {
                     this.requestLocationUpdates()
                 }
             }
-        } else if (this.mChangeListener != null) {
-            this.mChangeListener!!.onPermissionDenied()
+        } else {
+            this.mPermissionListener.onPermissionDenied()
         }
     }
 
     override fun onLocationChanged(location: Location) {
-        println("OnLocationChanged! " + location)
-        if (this.mChangeListener != null) {
-            this.mChangeListener!!.onLocationChanged(location)
-        }
+        // Timber.d("OnLocationChanged! %s", location)
+        recentLocationRelay.accept(location)
     }
-    interface LocationListener {
+
+    interface LocationPermissionListener {
 
         val permissionAlertTitle: String?
 
         val permissionAlertDescription: String
 
-        fun onLocationChanged(var1: Location)
         fun onPermissionDenied()
-
     }
 }

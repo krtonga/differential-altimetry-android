@@ -16,33 +16,49 @@ data class ArduinoEntry(
 
         val arPressure: Float,
 
-        val arAltitude: Float
+        val arAltitude: Float,
 
 
-//        // From GPS
-//        val latitude:Double,
-//
-//        val longitude:Double,
-//
-//        val locAltitude:Double,
-//
-//        val locAccuracy:Float,
-//
-//        val locBearing:Float,
-//
-//        val locTime: Date
+        // From GPS
+        val latitude:Double,
+
+        val longitude:Double,
+
+        val locAltitude:Double,
+
+        val locAccuracy:Float,
+
+        val locBearing:Float,
+
+        val locTime: Long
 ) {
     @Ignore
+    constructor(arTemperature: Float,
+                arPressure: Float,
+                arAltitude: Float,
+                location: Location)
+            : this(
+            arTemperature = arTemperature,
+            arPressure = arPressure,
+            arAltitude = arAltitude,
+            latitude = location.latitude,
+            longitude = location.longitude,
+            locAltitude = location.altitude,
+            locAccuracy = location.accuracy,
+            locBearing = location.bearing,
+            locTime = location.time)
+
+    @Ignore
     val location = Location("").apply {
-//        latitude = this@ArduinoEntry.latitude
-//        longitude = this@ArduinoEntry.longitude
-//        altitude = this@ArduinoEntry.locAltitude
-//        accuracy = this@ArduinoEntry.locAccuracy
-//        bearing = this@ArduinoEntry.locBearing
-//        time = this@ArduinoEntry.locTime.time
+        latitude = this@ArduinoEntry.latitude
+        longitude = this@ArduinoEntry.longitude
+        altitude = this@ArduinoEntry.locAltitude
+        accuracy = this@ArduinoEntry.locAccuracy
+        bearing = this@ArduinoEntry.locBearing
+        time = this@ArduinoEntry.locTime
     }
 
     override fun toString(): String {
-        return "T: $arTemperature P:$arPressure A:$arAltitude"
+        return "Temp: $arTemperature Pr:$arPressure Alt:$arAltitude Loc:$latitude,$longitude x $locAltitude Acc:$locAccuracy"
     }
 }

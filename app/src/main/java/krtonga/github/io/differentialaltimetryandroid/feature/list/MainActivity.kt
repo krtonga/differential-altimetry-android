@@ -1,5 +1,6 @@
 package krtonga.github.io.differentialaltimetryandroid.feature.list
 
+import android.content.Intent
 import android.os.Bundle
 import android.support.v7.app.AppCompatActivity
 import android.support.v7.widget.LinearLayoutManager
@@ -9,22 +10,25 @@ import android.widget.Button
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
+import android.widget.Toast.LENGTH_LONG
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.schedulers.Schedulers
 import krtonga.github.io.differentialaltimetryandroid.AltitudeApp
 import krtonga.github.io.differentialaltimetryandroid.R
 import krtonga.github.io.differentialaltimetryandroid.core.arduino.Arduino
 import krtonga.github.io.differentialaltimetryandroid.core.db.AppDatabase
+import krtonga.github.io.differentialaltimetryandroid.core.location.LocationTracker
 import timber.log.Timber
 
 
-class MainActivity : AppCompatActivity() {
-
+class MainActivity : AppCompatActivity(), LocationTracker.LocationPermissionListener {
     private lateinit var startButton: Button
+
     private lateinit var readingsRv: RecyclerView
     private lateinit var showConsole: TextView
     private lateinit var consoleScroll: ScrollView
     private lateinit var console: TextView
+    private lateinit var locationTracker: LocationTracker
 
     private lateinit var arduino: Arduino
     lateinit var db: AppDatabase
@@ -35,6 +39,10 @@ class MainActivity : AppCompatActivity() {
 
         arduino = (application as AltitudeApp).arduino
         db = (application as AltitudeApp).database
+
+        // Start location tracker ASAP to give it sufficient time to get a good point
+        locationTracker = (application as AltitudeApp).locationTracker
+        locationTracker.start(this, this)
 
         // Print all Timber logs to the console view
         console = findViewById(R.id.console)
@@ -82,9 +90,31 @@ class MainActivity : AppCompatActivity() {
                 })
     }
 
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        locationTracker.respondToPermissions(requestCode, grantResults)
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        locationTracker.respondToActivityResult(requestCode, resultCode)
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         arduino.stop()
+        locationTracker.onPause()
+    }
+
+    override val permissionAlertTitle: String?
+        get() = getString(R.string.permissions_location_title)
+
+    override val permissionAlertDescription: String
+        get() = getString(R.string.permissions_location_msg)
+
+    override fun onPermissionDenied() {
+        Toast.makeText(applicationContext, R.string.permissions_location_title, LENGTH_LONG).show()
+        finish()
     }
 }
 

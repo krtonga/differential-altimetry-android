@@ -4,4 +4,6 @@
     <string name="stop_arduino">Stop Arduino</string>
     <string name="arduino_stopped">Arduino stopped.</string>
     <string name="console_log">CONSOLE LOG</string>
+    <string name="permissions_location_title">Location is Required</string>
+    <string name="permissions_location_msg">What use is altitude without GPS?</string>
 </resources>

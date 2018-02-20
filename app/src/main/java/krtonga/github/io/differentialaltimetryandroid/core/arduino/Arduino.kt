@@ -8,17 +8,20 @@ import android.content.IntentFilter
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbDeviceConnection
 import android.hardware.usb.UsbManager
+import android.location.Location
 import com.felhr.usbserial.CDCSerialDevice
 import com.felhr.usbserial.UsbSerialDevice
 import com.felhr.usbserial.UsbSerialInterface
 import com.jakewharton.rxrelay2.BehaviorRelay
+import io.reactivex.Observable
 import krtonga.github.io.differentialaltimetryandroid.R
 import krtonga.github.io.differentialaltimetryandroid.core.db.AppDatabase
+import krtonga.github.io.differentialaltimetryandroid.core.location.LocationTracker
 import timber.log.Timber
 import java.util.*
 
 
-class Arduino(context: Context, db: AppDatabase) : UsbSerialInterface.UsbReadCallback {
+class Arduino(context: Context, db: AppDatabase, locations: Observable<Location>) : UsbSerialInterface.UsbReadCallback {
 
     private val cntx: Context = context
 
@@ -32,7 +35,7 @@ class Arduino(context: Context, db: AppDatabase) : UsbSerialInterface.UsbReadCal
 
     private var serialPort: UsbSerialDevice? = null
 
-    private val builder: ArduinoEntryBuilder = ArduinoEntryBuilder(db)
+    private val builder: ArduinoEntryBuilder = ArduinoEntryBuilder(db, locations)
 
     private val usbReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
