@@ -61,7 +61,7 @@ class ArduinoEntryBuilder(db: AppDatabase, locations: Observable<Location>) {
             return
         }
         val arduinoString = nextReading.toString()
-        log(arduinoString + "    V:" + isValidReading(arduinoString))
+        Timber.d(arduinoString + "    V:" + isValidReading(arduinoString))
         if (isValidReading(arduinoString)) {
             addDBEntry(arduinoString, location)
         }
@@ -83,14 +83,5 @@ class ArduinoEntryBuilder(db: AppDatabase, locations: Observable<Location>) {
 
         database.entryDoa().insert(entry)
         return entry
-    }
-
-
-    private fun log(log: String) {
-        Observable.just(log)
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe({
-                    Timber.d(it)
-                })
     }
 }

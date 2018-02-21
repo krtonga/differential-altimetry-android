@@ -9,6 +9,8 @@ import android.view.View
 import android.widget.*
 import android.widget.Toast.LENGTH_LONG
 import io.reactivex.Flowable
+import io.reactivex.Observable
+import io.reactivex.android.schedulers.AndroidSchedulers
 import krtonga.github.io.differentialaltimetryandroid.AltitudeApp
 import krtonga.github.io.differentialaltimetryandroid.R
 import krtonga.github.io.differentialaltimetryandroid.core.arduino.Arduino
@@ -149,9 +151,14 @@ class FalseLogTree(inView: TextView) : Timber.Tree() {
     private val log = StringBuilder()
 
     override fun log(priority: Int, tag: String?, message: String, t: Throwable?) {
-        log.append('\n')
-        log.append(message)
-        consoleView.text = log
+        // Ensure that this is only attempted on the main thread
+        Observable.just(log)
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe({
+                    log.append('\n')
+                    log.append(message)
+                    consoleView.text = log
+                })
     }
 
 }
