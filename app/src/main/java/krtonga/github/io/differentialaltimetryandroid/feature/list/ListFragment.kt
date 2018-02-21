@@ -1,6 +1,7 @@
 package krtonga.github.io.differentialaltimetryandroid.feature.list
 
 import android.os.Bundle
+import android.support.v7.widget.DividerItemDecoration
 import android.support.v7.widget.LinearLayoutManager
 import android.support.v7.widget.RecyclerView
 import android.view.LayoutInflater
@@ -10,7 +11,6 @@ import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.schedulers.Schedulers
 import krtonga.github.io.differentialaltimetryandroid.R
 import krtonga.github.io.differentialaltimetryandroid.feature.shared.ArduinoDataFragment
-import android.support.v7.widget.DividerItemDecoration
 
 
 class ListFragment : ArduinoDataFragment() {
@@ -23,8 +23,8 @@ class ListFragment : ArduinoDataFragment() {
         readingsRv = inflater.inflate(R.layout.fragment_list, container, false) as RecyclerView
 
         // Show line between entries
-        readingsRv.layoutManager = LinearLayoutManager(context)
         val dividerItemDecoration = DividerItemDecoration(context, LinearLayoutManager.VERTICAL)
+        readingsRv.layoutManager = LinearLayoutManager(context)
         readingsRv.addItemDecoration(dividerItemDecoration)
 
         // Hook up list to populate based on db entries
@@ -32,7 +32,13 @@ class ListFragment : ArduinoDataFragment() {
                 .subscribeOn(Schedulers.newThread())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe({ list ->
-                    readingsRv.adapter = ArduinoAltitudeAdapter(list)
+                    // If initial load, create adapter
+                    if (readingsRv.adapter == null) {
+                        readingsRv.adapter = ArduinoAltitudeAdapter(list)
+                    } else {
+                        // Use diff util to only update where needed
+                        (readingsRv.adapter as ArduinoAltitudeAdapter).updateEntries(list)
+                    }
                 })
 
         return readingsRv

@@ -6,13 +6,18 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import io.reactivex.android.schedulers.AndroidSchedulers
+import io.reactivex.schedulers.Schedulers
 import krtonga.github.io.differentialaltimetryandroid.R
+import krtonga.github.io.differentialaltimetryandroid.core.arduino.ArduinoEntryDiffUtil
 import krtonga.github.io.differentialaltimetryandroid.core.db.ArduinoEntry
+import timber.log.Timber
 import java.util.*
 
 class ArduinoAltitudeAdapter(
-        private var dataset: List<ArduinoEntry>
+        var dataset: List<ArduinoEntry>
 ) : RecyclerView.Adapter<ArduinoAltitudeAdapter.ViewHolder>() {
+
     companion object {
         private const val HEADER_TYPE = 0
         private const val ITEM_TYPE = 1
@@ -39,7 +44,7 @@ class ArduinoAltitudeAdapter(
             return
         }
 
-        val entry: ArduinoEntry = dataset[position-1]
+        val entry: ArduinoEntry = dataset[position - 1]
         val context = holder?.dateColumn!!.context
 
         val date = DateFormat.format(context.getString(R.string.col_date_format), Date(entry.time))
@@ -52,6 +57,16 @@ class ArduinoAltitudeAdapter(
                 "%.2f".format(entry.locAltitude))
     }
 
+    fun updateEntries(newList: List<ArduinoEntry>) {
+        ArduinoEntryDiffUtil.compare(dataset, newList)
+                .subscribeOn(Schedulers.newThread())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe({ result ->
+                    Timber.d("On results")
+                    dataset = newList
+                    result.dispatchUpdatesTo(this)
+                })
+    }
 
     class ViewHolder(// each data item is just a string in this case
             view: View) : RecyclerView.ViewHolder(view) {

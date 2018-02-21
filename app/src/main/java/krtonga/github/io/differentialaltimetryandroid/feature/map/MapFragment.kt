@@ -1,10 +1,12 @@
 package krtonga.github.io.differentialaltimetryandroid.feature.map
 
 import android.os.Bundle
+import android.support.v7.util.ListUpdateCallback
 import android.text.format.DateFormat
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import com.mapbox.mapboxsdk.annotations.Marker
 import com.mapbox.mapboxsdk.annotations.MarkerOptions
 import com.mapbox.mapboxsdk.geometry.LatLng
 import com.mapbox.mapboxsdk.maps.MapView
@@ -14,28 +16,54 @@ import java.util.*
 import com.mapbox.mapboxsdk.camera.CameraUpdateFactory
 import com.mapbox.mapboxsdk.maps.MapboxMap
 import io.reactivex.android.schedulers.AndroidSchedulers
+import io.reactivex.schedulers.Schedulers
+import krtonga.github.io.differentialaltimetryandroid.core.arduino.ArduinoEntryDiffUtil
 import krtonga.github.io.differentialaltimetryandroid.core.db.ArduinoEntry
+import kotlin.collections.ArrayList
+import kotlin.collections.HashMap
 
 
-class MapFragment : ArduinoDataFragment() {
+class MapFragment : ArduinoDataFragment(), ListUpdateCallback {
 
     private lateinit var mapView: MapView
+    private lateinit var map: MapboxMap
+    private var oldList: List<ArduinoEntry> = ArrayList()
+    private var markerList: HashMap<Int, Marker> = HashMap()
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         mapView = inflater.inflate(R.layout.fragment_map, container, false) as MapView
         mapView.onCreate(savedInstanceState)
 
         mapView.getMapAsync { map ->
-            mListener?.getListObservable()?.observeOn(AndroidSchedulers.mainThread())?.subscribe({
-                map.clear()
-                setCameraPosition(map, it[it.size-1]) // zoom to last position
-                it?.map {
-                    getMarkerOptions(it)
-                }?.forEach { map.addMarker(it) }
+            this.map = map
+            mListener?.getListObservable()?.observeOn(AndroidSchedulers.mainThread())?.subscribe({ list ->
+                if (isAttached()) {
+                    if (markerList.isEmpty()) {
+                        list.map { entry ->
+                            val marker = map.addMarker(getMarkerOptions(entry))
+                            markerList.put(entry.id, marker)
+                        }
+                        setCameraPosition(map, list[list.size - 1])
+                    } else {
+                        ArduinoEntryDiffUtil.compare(oldList, list)
+                                .subscribeOn(Schedulers.newThread())
+                                .observeOn(AndroidSchedulers.mainThread())
+                                .subscribe({
+                                    if (isAttached()) {
+                                        it.dispatchUpdatesTo(this)
+                                    }
+                                })
+                    }
+                    oldList = list
+                }
             })
         }
 
         return mapView
+    }
+
+    private fun isAttached() : Boolean {
+        return activity != null && isAdded
     }
 
     private fun getMarkerOptions(entry: ArduinoEntry) : MarkerOptions {
@@ -49,9 +77,8 @@ class MapFragment : ArduinoDataFragment() {
     }
 
     private fun setCameraPosition(map: MapboxMap, entry: ArduinoEntry) {
-        val zoom = if (map.cameraPosition.zoom > 13.0) map.cameraPosition.zoom else 13.0
         map.animateCamera(CameraUpdateFactory.newLatLngZoom(
-                LatLng(entry.latitude, entry.longitude), zoom))
+                LatLng(entry.latitude, entry.longitude), 13.0))
     }
 
     override fun onStart() {
@@ -82,6 +109,31 @@ class MapFragment : ArduinoDataFragment() {
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         mapView.onSaveInstanceState(outState)
+    }
+
+    override fun onChanged(position: Int, count: Int, payload: Any?) {
+        val entry = oldList[position]
+        val marker = markerList[entry.id]
+        if (marker != null) {
+            map.removeMarker(marker)
+        }
+        markerList[entry.id] = map.addMarker(getMarkerOptions(entry))
+    }
+
+    override fun onMoved(fromPosition: Int, toPosition: Int) {
+        // maps don't care...
+    }
+
+    override fun onInserted(position: Int, count: Int) {
+        val entry = oldList[position]
+        markerList[entry.id] = map.addMarker(getMarkerOptions(entry))
+    }
+
+    override fun onRemoved(position: Int, count: Int) {
+        val marker = markerList[oldList[position].id]
+        if (marker != null) {
+            map.removeMarker(marker)
+        }
     }
 }
 
