@@ -16,7 +16,6 @@ class ArduinoEntryBuilder(db: AppDatabase, locations: Observable<Location>) {
     init {
         locations.subscribe {
             if (it != null) {
-                Timber.d(it.toString())
                 currentLocation = it
             }
         }
@@ -70,8 +69,8 @@ class ArduinoEntryBuilder(db: AppDatabase, locations: Observable<Location>) {
     }
 
     private fun isValidReading(reading: String): Boolean {
-        // ensures that first part of line is +/- float
-        return reading.trim().matches(Regex("-*\\d+.\\d{2}.+"))
+        // ensures that line is constructed of 3 comma delimited +/- floats
+        return reading.trim().matches(Regex("-*\\d+.\\d{2},.-*\\d+.\\d{2},.-*\\d+.\\d{2}"))
     }
 
     private fun addDBEntry(reading: String, location: Location): ArduinoEntry {

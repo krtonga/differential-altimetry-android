@@ -4,6 +4,7 @@ import android.app.Activity
 import android.app.Application
 import android.arch.persistence.room.Room
 import android.content.Context
+import com.mapbox.mapboxsdk.Mapbox
 import krtonga.github.io.differentialaltimetryandroid.core.arduino.Arduino
 import krtonga.github.io.differentialaltimetryandroid.core.db.AppDatabase
 import krtonga.github.io.differentialaltimetryandroid.core.location.LocationTracker
@@ -16,6 +17,7 @@ class AltitudeApp : Application() {
         if (BuildConfig.DEBUG) {
             Timber.plant(Timber.DebugTree())
         }
+        Mapbox.getInstance(applicationContext, getString(R.string.mapbox_token))
     }
 
     val locationTracker by lazy { LocationTracker() }

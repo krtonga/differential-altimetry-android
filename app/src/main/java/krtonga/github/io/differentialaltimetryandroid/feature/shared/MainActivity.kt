@@ -1,37 +1,37 @@
-package krtonga.github.io.differentialaltimetryandroid.feature.list
+package krtonga.github.io.differentialaltimetryandroid.feature.shared
 
 import android.content.Intent
 import android.os.Bundle
+import android.support.design.widget.FloatingActionButton
+import android.support.v4.app.FragmentTransaction
 import android.support.v7.app.AppCompatActivity
-import android.support.v7.widget.LinearLayoutManager
-import android.support.v7.widget.RecyclerView
 import android.view.View
-import android.widget.Button
-import android.widget.ScrollView
-import android.widget.TextView
-import android.widget.Toast
+import android.widget.*
 import android.widget.Toast.LENGTH_LONG
-import io.reactivex.android.schedulers.AndroidSchedulers
-import io.reactivex.schedulers.Schedulers
+import io.reactivex.Flowable
 import krtonga.github.io.differentialaltimetryandroid.AltitudeApp
 import krtonga.github.io.differentialaltimetryandroid.R
 import krtonga.github.io.differentialaltimetryandroid.core.arduino.Arduino
 import krtonga.github.io.differentialaltimetryandroid.core.db.AppDatabase
+import krtonga.github.io.differentialaltimetryandroid.core.db.ArduinoEntry
 import krtonga.github.io.differentialaltimetryandroid.core.location.LocationTracker
+import krtonga.github.io.differentialaltimetryandroid.feature.list.ListFragment
+import krtonga.github.io.differentialaltimetryandroid.feature.map.MapFragment
 import timber.log.Timber
 
 
-class MainActivity : AppCompatActivity(), LocationTracker.LocationPermissionListener {
+class MainActivity : AppCompatActivity(), LocationTracker.LocationPermissionListener, FragmentInteractionListener {
     private lateinit var startButton: Button
 
-    private lateinit var readingsRv: RecyclerView
     private lateinit var showConsole: TextView
     private lateinit var consoleScroll: ScrollView
     private lateinit var console: TextView
-    private lateinit var locationTracker: LocationTracker
 
+    private lateinit var viewToggle: FloatingActionButton
+
+    private lateinit var locationTracker: LocationTracker
     private lateinit var arduino: Arduino
-    lateinit var db: AppDatabase
+    private lateinit var db: AppDatabase
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -80,14 +80,19 @@ class MainActivity : AppCompatActivity(), LocationTracker.LocationPermissionList
             }
         })
 
-        // Hook up list to populate based on db entries
-        readingsRv = findViewById(R.id.rv_measurements)
-        readingsRv.layoutManager = LinearLayoutManager(this)
-        db.entryDoa().getAll().subscribeOn(Schedulers.newThread())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe({ list ->
-                    readingsRv.adapter = ArduinoAltitudeAdapter(list)
-                })
+        // Show list or map
+        viewToggle = findViewById(R.id.fab_view_type_toggle)
+        when (UiUtils.getViewType(this)) {
+            UiUtils.TYPE_LIST -> displayListView()
+            UiUtils.TYPE_MAP -> displayMap()
+        }
+        // Allow toggle between the two views
+        viewToggle.setOnClickListener({
+            when (UiUtils.getViewType(this)) {
+                UiUtils.TYPE_LIST -> displayMap()
+                UiUtils.TYPE_MAP -> displayListView()
+            }
+        })
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
@@ -106,6 +111,23 @@ class MainActivity : AppCompatActivity(), LocationTracker.LocationPermissionList
         locationTracker.onPause()
     }
 
+    private fun displayListView() {
+        supportFragmentManager.beginTransaction()
+                .replace(R.id.fl_container, ArduinoDataFragment.newInstance(ListFragment()), "LIST")
+                .commit()
+        viewToggle.setImageResource(R.drawable.ic_map_black_24dp)
+        UiUtils.saveViewType(this, UiUtils.TYPE_LIST)
+    }
+
+    private fun displayMap() {
+        supportFragmentManager.beginTransaction()
+                .replace(R.id.fl_container, ArduinoDataFragment.newInstance(MapFragment()), "MAP")
+                .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE)
+                .commit()
+        viewToggle.setImageResource(R.drawable.ic_view_list_black_24dp)
+        UiUtils.saveViewType(this, UiUtils.TYPE_MAP)
+    }
+
     override val permissionAlertTitle: String?
         get() = getString(R.string.permissions_location_title)
 
@@ -115,6 +137,10 @@ class MainActivity : AppCompatActivity(), LocationTracker.LocationPermissionList
     override fun onPermissionDenied() {
         Toast.makeText(applicationContext, R.string.permissions_location_title, LENGTH_LONG).show()
         finish()
+    }
+
+    override fun getListObservable(): Flowable<List<ArduinoEntry>> {
+        return db.entryDoa().getAll()
     }
 }
 
