@@ -7,7 +7,7 @@ import krtonga.github.io.differentialaltimetryandroid.core.db.AppDatabase
 import krtonga.github.io.differentialaltimetryandroid.core.db.ArduinoEntry
 import timber.log.Timber
 
-class ArduinoEntryBuilder(db: AppDatabase, locations: Observable<Location>) {
+class ArduinoEntryBuilder(db: AppDatabase, val locations: Observable<Location>) {
 
     var nextReading = StringBuilder()
     var database = db
@@ -16,6 +16,15 @@ class ArduinoEntryBuilder(db: AppDatabase, locations: Observable<Location>) {
     init {
         locations.subscribe {
             if (it != null) {
+                currentLocation = it
+            }
+        }
+    }
+
+    fun start() {
+        locations.subscribe {
+            if (it != null) {
+                Timber.i("Locations are comin! %s", it)
                 currentLocation = it
             }
         }
@@ -61,7 +70,7 @@ class ArduinoEntryBuilder(db: AppDatabase, locations: Observable<Location>) {
             return
         }
         val arduinoString = nextReading.toString()
-        Timber.d(arduinoString + "    V:" + isValidReading(arduinoString))
+        Timber.d("%s    V:%s", arduinoString, isValidReading(arduinoString))
         if (isValidReading(arduinoString)) {
             addDBEntry(arduinoString, location)
         }

@@ -16,7 +16,6 @@ import com.jakewharton.rxrelay2.BehaviorRelay
 import io.reactivex.Observable
 import krtonga.github.io.differentialaltimetryandroid.R
 import krtonga.github.io.differentialaltimetryandroid.core.db.AppDatabase
-import krtonga.github.io.differentialaltimetryandroid.core.location.LocationTracker
 import timber.log.Timber
 import java.util.*
 

@@ -17,6 +17,7 @@ import com.mapbox.mapboxsdk.camera.CameraUpdateFactory
 import com.mapbox.mapboxsdk.maps.MapboxMap
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.schedulers.Schedulers
+import krtonga.github.io.differentialaltimetryandroid.AltitudeApp
 import krtonga.github.io.differentialaltimetryandroid.core.arduino.ArduinoEntryDiffUtil
 import krtonga.github.io.differentialaltimetryandroid.core.db.ArduinoEntry
 import kotlin.collections.ArrayList
@@ -36,27 +37,39 @@ class MapFragment : ArduinoDataFragment(), ListUpdateCallback {
 
         mapView.getMapAsync { map ->
             this.map = map
-            mListener?.getListObservable()?.observeOn(AndroidSchedulers.mainThread())?.subscribe({ list ->
-                if (isAttached()) {
-                    if (markerList.isEmpty()) {
-                        list.map { entry ->
-                            val marker = map.addMarker(getMarkerOptions(entry))
-                            markerList.put(entry.id, marker)
+
+            // Listen for database updates
+            mListener?.getListObservable()
+                    ?.observeOn(AndroidSchedulers.mainThread())
+                    ?.subscribe({ list ->
+                        if (isAttached()) {
+                            if (markerList.isEmpty()) {
+                                list.map { entry ->
+                                    val marker = map.addMarker(getMarkerOptions(entry))
+                                    markerList.put(entry.id, marker)
+                                }
+                                if (markerList.isNotEmpty()) {
+                                    setCameraPosition(map, list[list.size - 1])
+                                }
+                            } else {
+                                ArduinoEntryDiffUtil.compare(oldList, list)
+                                        .subscribeOn(Schedulers.newThread())
+                                        .observeOn(AndroidSchedulers.mainThread())
+                                        .subscribe({
+                                            if (isAttached()) {
+                                                it.dispatchUpdatesTo(this)
+                                            }
+                                        })
+                            }
+                            oldList = list
                         }
-                        setCameraPosition(map, list[list.size - 1])
-                    } else {
-                        ArduinoEntryDiffUtil.compare(oldList, list)
-                                .subscribeOn(Schedulers.newThread())
-                                .observeOn(AndroidSchedulers.mainThread())
-                                .subscribe({
-                                    if (isAttached()) {
-                                        it.dispatchUpdatesTo(this)
-                                    }
-                                })
-                    }
-                    oldList = list
-                }
-            })
+                    })
+
+            // Set style according to settings
+            val app = activity?.application
+            if (app is AltitudeApp) {
+                map.setStyle(app.settingsHelper.mapboxStyle())
+            }
         }
 
         return mapView

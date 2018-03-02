@@ -1,28 +1,33 @@
 package krtonga.github.io.differentialaltimetryandroid.feature.shared
 
-import android.content.Intent
 import android.os.Bundle
 import android.support.design.widget.FloatingActionButton
 import android.support.v4.app.FragmentTransaction
 import android.support.v7.app.AppCompatActivity
+import android.view.Menu
+import android.view.MenuItem
 import android.view.View
 import android.widget.*
-import android.widget.Toast.LENGTH_LONG
 import io.reactivex.Flowable
 import io.reactivex.Observable
 import io.reactivex.android.schedulers.AndroidSchedulers
+import io.reactivex.disposables.CompositeDisposable
+import io.reactivex.functions.Consumer
+import io.reactivex.schedulers.Schedulers
 import krtonga.github.io.differentialaltimetryandroid.AltitudeApp
 import krtonga.github.io.differentialaltimetryandroid.R
 import krtonga.github.io.differentialaltimetryandroid.core.arduino.Arduino
 import krtonga.github.io.differentialaltimetryandroid.core.db.AppDatabase
 import krtonga.github.io.differentialaltimetryandroid.core.db.ArduinoEntry
-import krtonga.github.io.differentialaltimetryandroid.core.location.LocationTracker
 import krtonga.github.io.differentialaltimetryandroid.feature.list.ListFragment
 import krtonga.github.io.differentialaltimetryandroid.feature.map.MapFragment
+import krtonga.github.io.differentialaltimetryandroid.feature.settings.SettingsHelper
 import timber.log.Timber
+import android.content.SharedPreferences
+import krtonga.github.io.differentialaltimetryandroid.core.location.LocationTracker
 
 
-class MainActivity : AppCompatActivity(), LocationTracker.LocationPermissionListener, FragmentInteractionListener {
+class MainActivity : AppCompatActivity(), FragmentInteractionListener {
     private lateinit var startButton: Button
 
     private lateinit var showConsole: TextView
@@ -32,19 +37,28 @@ class MainActivity : AppCompatActivity(), LocationTracker.LocationPermissionList
     private lateinit var viewToggle: FloatingActionButton
 
     private lateinit var locationTracker: LocationTracker
+    private lateinit var settingsHelper: SettingsHelper
     private lateinit var arduino: Arduino
     private lateinit var db: AppDatabase
+
+    private var compositeDisposable = CompositeDisposable()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        arduino = (application as AltitudeApp).arduino
-        db = (application as AltitudeApp).database
+        val app = application as AltitudeApp
+        arduino = app.arduino
+        db = app.database
+        locationTracker = app.locationTracker
+        settingsHelper = app.settingsHelper
 
-        // Start location tracker ASAP to give it sufficient time to get a good point
-        locationTracker = (application as AltitudeApp).locationTracker
-        locationTracker.start(this, this)
+        // Request Location permissions
+        LocationTracker.requestPermissions(this, Consumer{ granted ->
+            if (!granted) {
+                finish()
+            }
+        })
 
         // Print all Timber logs to the console view
         console = findViewById(R.id.console)
@@ -62,8 +76,14 @@ class MainActivity : AppCompatActivity(), LocationTracker.LocationPermissionList
         startButton = findViewById(R.id.btn_start_arduino)
         startButton.setOnClickListener {
             if (arduino.isConnected()) {
+                // Stop location trackers
+                compositeDisposable.dispose()
+                // Stop arduino readings
                 arduino.stop()
             } else {
+                // Start all location trackers
+                startLocationUpdates()
+                // Start arduino readings
                 arduino.start()
             }
         }
@@ -82,6 +102,16 @@ class MainActivity : AppCompatActivity(), LocationTracker.LocationPermissionList
             }
         })
 
+        // Watch for settings change and restart location updates as necessary
+        // TODO improve this...
+        val prefChangedListener = SharedPreferences.OnSharedPreferenceChangeListener { prefs, key ->
+            if (arduino.isConnected()) {
+                compositeDisposable.dispose()
+                startLocationUpdates()
+            }
+        }
+        settingsHelper.addListener(prefChangedListener)
+
         // Show list or map
         viewToggle = findViewById(R.id.fab_view_type_toggle)
         when (UiUtils.getViewType(this)) {
@@ -97,20 +127,29 @@ class MainActivity : AppCompatActivity(), LocationTracker.LocationPermissionList
         })
     }
 
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        locationTracker.respondToPermissions(requestCode, grantResults)
-    }
-
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        locationTracker.respondToActivityResult(requestCode, resultCode)
-    }
-
     override fun onDestroy() {
         super.onDestroy()
         arduino.stop()
-        locationTracker.onPause()
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.menu_map, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.action_settings -> settingsHelper.startSettingsActivity(this)
+            else -> super.onOptionsItemSelected(item)
+        }
+    }
+
+    private fun startLocationUpdates() {
+        for (tracker in locationTracker.startMany(this, settingsHelper)) {
+            val disposable = tracker.value
+                    .subscribe()
+            compositeDisposable.add(disposable)
+        }
     }
 
     private fun displayListView() {
@@ -128,17 +167,6 @@ class MainActivity : AppCompatActivity(), LocationTracker.LocationPermissionList
                 .commit()
         viewToggle.setImageResource(R.drawable.ic_view_list_black_24dp)
         UiUtils.saveViewType(this, UiUtils.TYPE_MAP)
-    }
-
-    override val permissionAlertTitle: String?
-        get() = getString(R.string.permissions_location_title)
-
-    override val permissionAlertDescription: String
-        get() = getString(R.string.permissions_location_msg)
-
-    override fun onPermissionDenied() {
-        Toast.makeText(applicationContext, R.string.permissions_location_title, LENGTH_LONG).show()
-        finish()
     }
 
     override fun getListObservable(): Flowable<List<ArduinoEntry>> {
