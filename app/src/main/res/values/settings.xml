@@ -74,4 +74,8 @@
         <item>mapbox://styles/mapbox/satellite-v9</item>
         <item>mapbox://styles/mapbox/satellite-streets-v10</item>
     </string-array>
+
+    <!--height-->
+    <string name="pref_key_height">height_m</string>
+
 </resources>

@@ -2,6 +2,8 @@
     <string name="app_name" tools:ignore="PrivateResource">Differential Altimetry</string>
     <string name="start_arduino">Start Arduino</string>
     <string name="stop_arduino">Stop Arduino</string>
+    <string name="start_calibration_point">Start Calibration Point</string>
+    <string name="is_calibrating">Calibrating…</string>
     <string name="arduino_stopped">Arduino stopped.</string>
     <string name="console_log">CONSOLE LOG</string>
     <string name="permissions_location_title">Location is Required</string>
@@ -14,5 +16,9 @@
     <string name="map_date_format">MM/d/yy h:mm:ss</string>
     <string name="col_arduino">tmp: %1$s\npr: %2$s\nalt: %3$s</string>
     <string name="col_gps">lat: %1$s\nlng: %2$s\nacc: %3$s\nalt: %4$s</string>
+
+    <string name="dialog_height_title">Height of Arduino</string>
+    <string name="dialog_height_description">During this survey, approximately how far above the ground will the arduino be in meters?</string>
+    <string name="dialog_height_confirm">OK</string>
 
 </resources>

@@ -1,10 +1,13 @@
 package krtonga.github.io.differentialaltimetryandroid.feature.settings
 
+import android.annotation.SuppressLint
 import android.app.Activity
 
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.res.Resources
+import android.preference.PreferenceManager
+import com.mapbox.mapboxsdk.Mapbox
 import krtonga.github.io.differentialaltimetryandroid.R
 import krtonga.github.io.differentialaltimetryandroid.core.location.LocationSettingsInterface
 import krtonga.github.io.differentialaltimetryandroid.core.location.LocationTracker
@@ -32,6 +35,21 @@ class SettingsHelper(val sharedPreferences: SharedPreferences, val resources: Re
             }
         }
         return GPS_ONLY
+    }
+
+    @SuppressLint("CommitPrefEdits")
+    fun saveDefaultHeight(height: Float) {
+        val sharedPreferences =
+                PreferenceManager.getDefaultSharedPreferences(Mapbox.getApplicationContext())
+        sharedPreferences.edit().apply {
+            putFloat(resources.getString(R.string.pref_key_height), height)
+            commit()
+        }
+    }
+
+    fun getDefaultHeight() : Float {
+        return sharedPreferences.getFloat(
+                resources.getString(R.string.pref_key_height), 0f)
     }
 
     fun addListener(changeListener: SharedPreferences.OnSharedPreferenceChangeListener) {

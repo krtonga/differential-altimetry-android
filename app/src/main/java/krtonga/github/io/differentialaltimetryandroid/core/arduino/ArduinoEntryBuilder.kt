@@ -1,33 +1,35 @@
 package krtonga.github.io.differentialaltimetryandroid.core.arduino
 
+import android.content.SharedPreferences
 import android.location.Location
 import io.reactivex.Observable
-import io.reactivex.android.schedulers.AndroidSchedulers
+import io.reactivex.disposables.CompositeDisposable
 import krtonga.github.io.differentialaltimetryandroid.core.db.AppDatabase
 import krtonga.github.io.differentialaltimetryandroid.core.db.ArduinoEntry
 import timber.log.Timber
 
-class ArduinoEntryBuilder(db: AppDatabase, val locations: Observable<Location>) {
+class ArduinoEntryBuilder(private val db: AppDatabase,
+                          locations: Observable<Location>) {
 
-    var nextReading = StringBuilder()
-    var database = db
-    var currentLocation: Location? = null
+    private var nextReading = StringBuilder()
+    private var lastLocation: Location? = null
+    var isCalibration: Boolean = false
+    var height: Float = 0f
+
+    //TODO Are these needed?
+    val disposables = CompositeDisposable()
 
     init {
-        locations.subscribe {
-            if (it != null) {
-                currentLocation = it
-            }
-        }
+        disposables.add(locations.subscribe{
+            lastLocation = it
+        })
     }
 
-    fun start() {
-        locations.subscribe {
-            if (it != null) {
-                Timber.i("Locations are comin! %s", it)
-                currentLocation = it
-            }
-        }
+    fun setArduinoState(state: Observable<ArduinoState>) {
+        disposables.add(state.subscribe{
+            isCalibration = it.isCalibrating
+            height = it.height
+        })
     }
 
     fun addBytes(bytes: ByteArray) {
@@ -64,13 +66,13 @@ class ArduinoEntryBuilder(db: AppDatabase, val locations: Observable<Location>) 
     }
 
     private fun createArduinoEntry() {
-        val location = this.currentLocation
+        val location = this.lastLocation
         if (location == null) {
             Timber.d("Arduino tracking ($nextReading), but location is null. No record will be saved.")
             return
         }
         val arduinoString = nextReading.toString()
-        Timber.d("%s    V:%s", arduinoString, isValidReading(arduinoString))
+        Timber.d("%s    V:%s, C:%s, H:%s", arduinoString, isValidReading(arduinoString), isCalibration, height)
         if (isValidReading(arduinoString)) {
             addDBEntry(arduinoString, location)
         }
@@ -88,9 +90,11 @@ class ArduinoEntryBuilder(db: AppDatabase, val locations: Observable<Location>) 
         val entry = ArduinoEntry(arTemperature = entryArray[0].toFloat(),
                 arPressure = entryArray[1].toFloat(),
                 arAltitude = entryArray[2].toFloat(),
-                location = location)
+                location = location,
+                isCalibration = isCalibration,
+                height = height)
 
-        database.entryDoa().insert(entry)
+        db.entryDoa().insert(entry)
         return entry
     }
 }

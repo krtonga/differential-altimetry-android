@@ -13,7 +13,6 @@ import io.reactivex.Observable
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.functions.Consumer
-import io.reactivex.schedulers.Schedulers
 import krtonga.github.io.differentialaltimetryandroid.AltitudeApp
 import krtonga.github.io.differentialaltimetryandroid.R
 import krtonga.github.io.differentialaltimetryandroid.core.arduino.Arduino
@@ -24,11 +23,14 @@ import krtonga.github.io.differentialaltimetryandroid.feature.map.MapFragment
 import krtonga.github.io.differentialaltimetryandroid.feature.settings.SettingsHelper
 import timber.log.Timber
 import android.content.SharedPreferences
+import android.support.v7.app.AlertDialog
+import krtonga.github.io.differentialaltimetryandroid.core.arduino.ArduinoEntryBuilder
 import krtonga.github.io.differentialaltimetryandroid.core.location.LocationTracker
 
 
 class MainActivity : AppCompatActivity(), FragmentInteractionListener {
     private lateinit var startButton: Button
+    private lateinit var calibrationButton: Button
 
     private lateinit var showConsole: TextView
     private lateinit var consoleScroll: ScrollView
@@ -40,6 +42,7 @@ class MainActivity : AppCompatActivity(), FragmentInteractionListener {
     private lateinit var settingsHelper: SettingsHelper
     private lateinit var arduino: Arduino
     private lateinit var db: AppDatabase
+    private lateinit var entryBuilder: ArduinoEntryBuilder
 
     private var compositeDisposable = CompositeDisposable()
 
@@ -52,6 +55,7 @@ class MainActivity : AppCompatActivity(), FragmentInteractionListener {
         db = app.database
         locationTracker = app.locationTracker
         settingsHelper = app.settingsHelper
+        entryBuilder = app.entryBuilder
 
         // Request Location permissions
         LocationTracker.requestPermissions(this, Consumer{ granted ->
@@ -72,6 +76,7 @@ class MainActivity : AppCompatActivity(), FragmentInteractionListener {
                     if (consoleScroll.visibility == View.GONE) View.VISIBLE else View.GONE
         })
 
+
         // Hook up a button to start/stop reading from arduino
         startButton = findViewById(R.id.btn_start_arduino)
         startButton.setOnClickListener {
@@ -83,21 +88,40 @@ class MainActivity : AppCompatActivity(), FragmentInteractionListener {
             } else {
                 // Start all location trackers
                 startLocationUpdates()
-                // Start arduino readings
-                arduino.start()
+                // Ask user for height of arduino (start will happen in dialog)
+                displayHeightSelectionDialog()
             }
         }
 
-        // Watch for arduino state changes & update button text
+        // Hook up 'calibration' button
+        calibrationButton = findViewById(R.id.btn_start_calibration)
+        calibrationButton.setOnClickListener {
+            if (arduino.isCalibrating()) {
+                arduino.setCalibrating(false)
+            } else {
+                arduino.setCalibrating(true)
+            }
+        }
+
+        // Watch for arduino state changes & update buttons
         arduino.arduinoState.subscribe({
             if (it != null) {
                 if (it.isConnected || it.isConnecting) {
                     startButton.setText(R.string.stop_arduino)
+                    calibrationButton.isEnabled = true
                 } else {
                     startButton.setText(R.string.start_arduino)
                     if (it.error.isNotEmpty()) {
                         Toast.makeText(applicationContext, it.error, Toast.LENGTH_LONG).show()
                     }
+                    calibrationButton.isEnabled = false
+                }
+
+                // Update calibration button text
+                if (it.isCalibrating) {
+                    calibrationButton.setText(R.string.is_calibrating)
+                } else {
+                    calibrationButton.setText(R.string.start_calibration_point)
                 }
             }
         })
@@ -150,6 +174,28 @@ class MainActivity : AppCompatActivity(), FragmentInteractionListener {
                     .subscribe()
             compositeDisposable.add(disposable)
         }
+    }
+
+    private fun displayHeightSelectionDialog() {
+        val layout = layoutInflater.inflate(R.layout.dialog_height, null)
+        val input = layout.findViewById(R.id.et_height) as EditText
+
+        // Use last saved height as hint
+        input.hint = settingsHelper.getDefaultHeight().toString()
+
+        val builder = AlertDialog.Builder(this)
+        builder.setTitle(R.string.dialog_height_title)
+                .setMessage(R.string.dialog_height_description)
+                .setView(layout)
+                .setPositiveButton(R.string.dialog_height_confirm, { _, _ ->
+
+                    val height = if (input.text.isEmpty())
+                        input.hint.toString().toFloat() else input.text.toString().toFloat()
+
+                    settingsHelper.saveDefaultHeight(height)
+                    arduino.start(height)
+                })
+        builder.show()
     }
 
     private fun displayListView() {

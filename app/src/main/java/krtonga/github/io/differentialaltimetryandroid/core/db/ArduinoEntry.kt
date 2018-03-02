@@ -35,14 +35,20 @@ data class ArduinoEntry(
         val locTime: Long,
 
         // At Moment of Creation
-        val time: Long = Date().time
+        val time: Long = Date().time,
+
+        val isCalibration: Boolean = false,
+
+        val height: Float
 
 ) : Parcelable {
     @Ignore
     constructor(arTemperature: Float,
                 arPressure: Float,
                 arAltitude: Float,
-                location: Location)
+                location: Location,
+                isCalibration: Boolean,
+                height: Float)
             : this(
             arTemperature = arTemperature,
             arPressure = arPressure,
@@ -52,7 +58,9 @@ data class ArduinoEntry(
             locAltitude = location.altitude,
             locAccuracy = location.accuracy,
             locBearing = location.bearing,
-            locTime = location.time)
+            locTime = location.time,
+            isCalibration = isCalibration,
+            height = height)
 
     constructor(parcel: Parcel) : this(
             parcel.readInt(),
@@ -65,7 +73,9 @@ data class ArduinoEntry(
             parcel.readFloat(),
             parcel.readFloat(),
             parcel.readLong(),
-            parcel.readLong())
+            parcel.readLong(),
+            parcel.readInt() == 1,
+            parcel.readFloat())
 
     @Ignore
     val location = Location("").apply {
@@ -93,6 +103,8 @@ data class ArduinoEntry(
         parcel.writeFloat(locBearing)
         parcel.writeLong(locTime)
         parcel.writeLong(time)
+        parcel.writeInt(if (isCalibration) 1 else 0)
+        parcel.writeFloat(height)
     }
 
     override fun describeContents(): Int {

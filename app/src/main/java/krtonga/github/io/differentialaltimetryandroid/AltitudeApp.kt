@@ -7,6 +7,7 @@ import com.crashlytics.android.Crashlytics
 import com.mapbox.mapboxsdk.Mapbox
 import io.fabric.sdk.android.Fabric
 import krtonga.github.io.differentialaltimetryandroid.core.arduino.Arduino
+import krtonga.github.io.differentialaltimetryandroid.core.arduino.ArduinoEntryBuilder
 import krtonga.github.io.differentialaltimetryandroid.core.db.AppDatabase
 import krtonga.github.io.differentialaltimetryandroid.core.location.LocationTracker
 import krtonga.github.io.differentialaltimetryandroid.feature.settings.SettingsHelper
@@ -24,17 +25,21 @@ class AltitudeApp : Application() {
         Fabric.with(this, Crashlytics())
     }
 
-    val locationTracker by lazy { LocationTracker() }
+    val arduino by lazy { Arduino(applicationContext, entryBuilder) }
 
-    val arduino by lazy { Arduino(applicationContext, database,
-            locationTracker.latestLocation) }
+    val entryBuilder by lazy { ArduinoEntryBuilder(database, locationTracker.latestLocation) }
+
+    val locationTracker by lazy { LocationTracker() }
 
     val database by lazy {
         Room.databaseBuilder(this, AppDatabase::class.java, "diff-altimetry-db")
-                .build()
+//            .addMigrations(AppDatabase.MIGRATION_1_3)
+                .fallbackToDestructiveMigration()
+            .build()
     }
 
-    val settingsHelper by lazy {  SettingsHelper(
-            PreferenceManager.getDefaultSharedPreferences(this), resources) }
+    val settingsHelper by lazy {
+        SettingsHelper(PreferenceManager.getDefaultSharedPreferences(this), resources)
+    }
 
 }

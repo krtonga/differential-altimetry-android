@@ -20,13 +20,14 @@ import timber.log.Timber
 import java.util.*
 
 
-class Arduino(context: Context, db: AppDatabase, locations: Observable<Location>) : UsbSerialInterface.UsbReadCallback {
+class Arduino(context: Context, private val builder: ArduinoEntryBuilder) : UsbSerialInterface.UsbReadCallback {
 
     private val cntx: Context = context
+    private var lastHeight: Float = 0f
 
     private val arduinoStateRelay = BehaviorRelay.createDefault(
-            ArduinoState(false, false,""))
-    val arduinoState = arduinoStateRelay.hide()
+            ArduinoState(false, false, false, lastHeight,""))
+    val arduinoState = arduinoStateRelay.hide()!!
 
     private var usbManager: UsbManager = context.getSystemService(Context.USB_SERVICE) as UsbManager
     private var connectedDevice: UsbDevice? = null
@@ -34,7 +35,9 @@ class Arduino(context: Context, db: AppDatabase, locations: Observable<Location>
 
     private var serialPort: UsbSerialDevice? = null
 
-    private val builder: ArduinoEntryBuilder = ArduinoEntryBuilder(db, locations)
+    init {
+        builder.setArduinoState(arduinoState)
+    }
 
     private val usbReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -74,12 +77,14 @@ class Arduino(context: Context, db: AppDatabase, locations: Observable<Location>
         const val BAUD_RATE = 9600
     }
 
-    fun start() {
+    fun start(height: Float) {
         Timber.d("Starting Arduino Connection...")
-
         if (isConnected()) {
             return
         }
+
+        lastHeight = height
+
         registerForBroadcasts()
 
         postConnecting()
@@ -98,6 +103,17 @@ class Arduino(context: Context, db: AppDatabase, locations: Observable<Location>
 
     fun isConnected() : Boolean {
         return arduinoStateRelay.value.isConnected
+    }
+
+    fun isCalibrating() : Boolean {
+        return arduinoStateRelay.value.isCalibrating
+    }
+
+    fun setCalibrating(calibrate: Boolean) {
+        val old = arduinoStateRelay.value
+        val newState = ArduinoState(
+                old.isConnected, old.isCalibrating, calibrate, old.height, old.error)
+        arduinoStateRelay.accept(newState)
     }
 
     private fun registerForBroadcasts() {
@@ -192,17 +208,17 @@ class Arduino(context: Context, db: AppDatabase, locations: Observable<Location>
     }
 
     private fun postConnecting() {
-        arduinoStateRelay.accept(ArduinoState(false, true, ""))
+        arduinoStateRelay.accept(ArduinoState(false, true, false, lastHeight,""))
     }
 
     private fun postConnected() {
         Timber.d("Arduino connection successful.\n")
-        arduinoStateRelay.accept(ArduinoState(true, false, ""))
+        arduinoStateRelay.accept(ArduinoState(true, false, false, lastHeight,""))
     }
 
     private fun postDisconnect(message: String) {
         Timber.d("%s\n",message)
-        arduinoStateRelay.accept(ArduinoState(false, false, message))
+        arduinoStateRelay.accept(ArduinoState(false, false, false, 0f, message))
     }
 
     override fun onReceivedData(bytes: ByteArray?) {
