@@ -23,6 +23,7 @@ import krtonga.github.io.differentialaltimetryandroid.feature.map.MapFragment
 import krtonga.github.io.differentialaltimetryandroid.feature.settings.SettingsHelper
 import timber.log.Timber
 import android.content.SharedPreferences
+import android.os.CountDownTimer
 import android.support.v7.app.AlertDialog
 import krtonga.github.io.differentialaltimetryandroid.core.arduino.ArduinoEntryBuilder
 import krtonga.github.io.differentialaltimetryandroid.core.location.LocationTracker
@@ -31,6 +32,8 @@ import krtonga.github.io.differentialaltimetryandroid.core.location.LocationTrac
 class MainActivity : AppCompatActivity(), FragmentInteractionListener {
     private lateinit var startButton: Button
     private lateinit var calibrationButton: Button
+    private lateinit var calibrationProgress: ProgressBar
+    private lateinit var calibrationTimer: CountDownTimer
 
     private lateinit var showConsole: TextView
     private lateinit var consoleScroll: ScrollView
@@ -95,11 +98,22 @@ class MainActivity : AppCompatActivity(), FragmentInteractionListener {
 
         // Hook up 'calibration' button
         calibrationButton = findViewById(R.id.btn_start_calibration)
+        calibrationProgress = findViewById(R.id.pb_calibration)
+        calibrationTimer = createCountdownTimer()
         calibrationButton.setOnClickListener {
             if (arduino.isCalibrating()) {
                 arduino.setCalibrating(false)
             } else {
                 arduino.setCalibrating(true)
+            }
+            if ((it as Button).text == getString(R.string.start_calibration_point)) {
+                calibrationButton.setText(R.string.is_calibrating)
+                calibrationTimer = createCountdownTimer()
+                calibrationTimer.start()
+            } else {
+                calibrationTimer.cancel()
+                calibrationProgress.progress = 0
+                calibrationButton.setText(R.string.start_calibration_point)
             }
         }
 
@@ -120,7 +134,11 @@ class MainActivity : AppCompatActivity(), FragmentInteractionListener {
                 // Update calibration button text
                 if (it.isCalibrating) {
                     calibrationButton.setText(R.string.is_calibrating)
+                    calibrationTimer = createCountdownTimer()
+                    calibrationTimer.start()
                 } else {
+                    calibrationTimer.cancel()
+                    calibrationProgress.progress = 0
                     calibrationButton.setText(R.string.start_calibration_point)
                 }
             }
@@ -173,6 +191,35 @@ class MainActivity : AppCompatActivity(), FragmentInteractionListener {
             val disposable = tracker.value
                     .subscribe()
             compositeDisposable.add(disposable)
+        }
+    }
+
+    private fun createCountdownTimer() : CountDownTimer {
+        return CalibrationTimer(
+                settingsHelper.getCalibrationMillisec(),
+                1000,
+                calibrationProgress,
+                calibrationButton)
+    }
+
+    class CalibrationTimer(millisInFuture: Long,
+                           countDownInterval: Long,
+                           val bar: ProgressBar,
+                           val button: Button)
+        : CountDownTimer(millisInFuture, countDownInterval) {
+
+        val tick = ((countDownInterval/millisInFuture.toFloat())*100).toInt()
+        var i = 0
+
+        override fun onTick(millisUntilFinished: Long) {
+            i++
+            bar.progress = tick*i
+        }
+
+        override fun onFinish() {
+            i++
+            bar.progress = tick*i
+            button.setText(R.string.stop_calibration_point)
         }
     }
 

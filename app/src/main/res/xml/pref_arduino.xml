@@ -1,0 +1,18 @@
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <PreferenceCategory
+        android:key="@string/pref_key_interval_catg"
+        android:title="@string/pref_calibration_catg">
+        <!-- NOTE: EditTextPreference accepts EditText attributes. -->
+        <!-- NOTE: EditTextPreference's summary should be set to its value by the activity code. -->
+        <EditTextPreference
+            android:defaultValue="@string/pref_default_arduino_interval"
+            android:inputType="number"
+            android:key="@string/pref_key_arduino_interval"
+            android:maxLines="1"
+            android:selectAllOnFocus="true"
+            android:singleLine="true"
+            android:title="@string/pref_title_arduino_interval" />
+    </PreferenceCategory>
+
+</PreferenceScreen>

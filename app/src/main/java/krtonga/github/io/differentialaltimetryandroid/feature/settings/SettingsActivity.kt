@@ -62,7 +62,8 @@ class SettingsActivity : AppCompatPreferenceActivity() {
      */
     override fun isValidFragment(fragmentName: String): Boolean {
         return LocationPreferenceFragment::class.java.name == fragmentName ||
-                MapboxPreferenceFragment::class.java.name == fragmentName
+                MapboxPreferenceFragment::class.java.name == fragmentName ||
+                ArduinoPreferenceFragment::class.java.name == fragmentName
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
@@ -91,6 +92,25 @@ class SettingsActivity : AppCompatPreferenceActivity() {
             // updated to reflect the new value, per the Android Design
             // guidelines.
             bindPreferenceSummaryToValue(findPreference(getString(R.string.pref_key_mapbox_style)))
+        }
+    }
+
+    /**
+     * This fragment shows arduino preferences only. It is used when the
+     * activity is showing a two-pane settings UI.
+     */
+    @TargetApi(Build.VERSION_CODES.HONEYCOMB)
+    class ArduinoPreferenceFragment : PreferenceFragment() {
+        override fun onCreate(savedInstanceState: Bundle?) {
+            super.onCreate(savedInstanceState)
+            addPreferencesFromResource(R.xml.pref_arduino)
+            setHasOptionsMenu(true)
+
+            // Bind the summaries of EditText/List/Dialog/Ringtone preferences
+            // to their values. When their values change, their summaries are
+            // updated to reflect the new value, per the Android Design
+            // guidelines.
+            bindPreferenceSummaryToValue(findPreference(getString(R.string.pref_key_arduino_interval)))
         }
     }
 

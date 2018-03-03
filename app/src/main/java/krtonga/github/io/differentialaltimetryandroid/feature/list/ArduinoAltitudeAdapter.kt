@@ -62,7 +62,6 @@ class ArduinoAltitudeAdapter(
                 .subscribeOn(Schedulers.newThread())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe({ result ->
-                    Timber.d("On results")
                     dataset = newList
                     result.dispatchUpdatesTo(this)
                 })

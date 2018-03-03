@@ -78,4 +78,14 @@
     <!--height-->
     <string name="pref_key_height">height_m</string>
 
+    <!--arduino-->
+    <string name="pref_header_arduino">Arduino Configuration</string>
+
+    <string name="pref_calibration_catg">Calibration</string>
+    <string name="pref_key_calibration_catg">calibration</string>
+    <string name="pref_key_arduino_interval">arduino_calibration_interval</string>
+    <string name="pref_title_arduino_interval">Recommended Wait Time (in seconds)</string>
+    <string name="pref_default_arduino_interval">120</string>
+
+
 </resources>

@@ -42,8 +42,6 @@ class ParseArduinoTest {
         splitAndCount(byteString, 4)
         results = checkSplitter(byteString)
         assertEquals(results.toArray().toString(),3, results.size)
-
-
     }
 
     fun checkSplitter(byteString: String) : ArrayList<String> {
@@ -72,5 +70,4 @@ class ParseArduinoTest {
         assertEquals(byteArray.toString(), count, byteArray.size)
 
     }
-
 }

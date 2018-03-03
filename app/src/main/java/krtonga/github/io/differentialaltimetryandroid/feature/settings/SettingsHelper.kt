@@ -52,6 +52,12 @@ class SettingsHelper(val sharedPreferences: SharedPreferences, val resources: Re
                 resources.getString(R.string.pref_key_height), 0f)
     }
 
+    fun getCalibrationMillisec() : Long {
+        return sharedPreferences.getString(
+                resources.getString(R.string.pref_key_arduino_interval),
+                resources.getString(R.string.pref_default_arduino_interval)).toLong() * 1000
+    }
+
     fun addListener(changeListener: SharedPreferences.OnSharedPreferenceChangeListener) {
         sharedPreferences.registerOnSharedPreferenceChangeListener(changeListener)
     }
