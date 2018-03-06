@@ -24,7 +24,4 @@
     <string name="dialog_height_description">During this survey, approximately how far above the ground will the arduino be in meters?</string>
     <string name="dialog_height_confirm">OK</string>
 
-    <string name="arduino_string">Temperature: %1$s C°\nPressure: %2$s Pa \nAltitude: %3$sm\nLocation: {Lat:%4$s, Long:%5$s, Elev:%6$s m} \nLocation Accuracy: %7$s m\nIsCalibrationPoint: %8$s \nInitialHeight: %9$s m"</string>
-
-
 </resources>
