@@ -88,7 +88,7 @@ data class ArduinoEntry(
     }
 
     override fun toString(): String {
-        return "Temp: $arTemperature Pr:$arPressure Alt:$arAltitude Loc:$latitude,$longitude x $locAltitude Acc:$locAccuracy"
+        return "Temperature: $arTemperature C°\nPressure: $arPressure Pa \nAltitude: $arAltitude\nLocation: {Lat:$latitude, Long:$longitude, Elev:$locAltitude m} \nLocation Accuracy: $locAccuracy m\nIsCalibrationPoint: $isCalibration \nInitialHeight: $height m"
     }
 
     override fun writeToParcel(parcel: Parcel, flags: Int) {

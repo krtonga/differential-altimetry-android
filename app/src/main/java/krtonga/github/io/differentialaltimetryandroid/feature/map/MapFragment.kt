@@ -81,9 +81,9 @@ class MapFragment : ArduinoDataFragment(), ListUpdateCallback {
     }
 
     private fun getMarkerOptions(entry: ArduinoEntry) : MarkerOptions {
-        val title = "Tmp:"+entry.arTemperature+ ", Pr:" + entry.arPressure+", Alt:" + entry.arAltitude
-        val msg = DateFormat.format(
+        val title = DateFormat.format(
                 getString(R.string.map_date_format), Date(entry.time)).toString()
+        val msg = entry.toString()
 
         return MarkerOptions().position(LatLng(entry.location))
                 .title(title)
