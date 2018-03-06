@@ -20,6 +20,7 @@ import io.reactivex.schedulers.Schedulers
 import krtonga.github.io.differentialaltimetryandroid.AltitudeApp
 import krtonga.github.io.differentialaltimetryandroid.core.arduino.ArduinoEntryDiffUtil
 import krtonga.github.io.differentialaltimetryandroid.core.db.ArduinoEntry
+import timber.log.Timber
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
 
@@ -143,6 +144,16 @@ class MapFragment : ArduinoDataFragment(), ListUpdateCallback {
     }
 
     override fun onRemoved(position: Int, count: Int) {
+        // On full delete
+        if (oldList.isEmpty()) {
+            if (markerList.isNotEmpty()) {
+                for (marker in markerList) {
+                    map.removeMarker(marker.value)
+                }
+            }
+            return
+        }
+        // On one item removed
         val marker = markerList[oldList[position].id]
         if (marker != null) {
             map.removeMarker(marker)

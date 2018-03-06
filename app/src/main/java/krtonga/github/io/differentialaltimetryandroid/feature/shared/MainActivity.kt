@@ -24,9 +24,13 @@ import krtonga.github.io.differentialaltimetryandroid.feature.settings.SettingsH
 import timber.log.Timber
 import android.content.SharedPreferences
 import android.os.CountDownTimer
+import android.support.design.widget.Snackbar
 import android.support.v7.app.AlertDialog
+import io.reactivex.observers.DisposableObserver
 import krtonga.github.io.differentialaltimetryandroid.core.arduino.ArduinoEntryBuilder
+import krtonga.github.io.differentialaltimetryandroid.core.csv.CsvBuilder
 import krtonga.github.io.differentialaltimetryandroid.core.location.LocationTracker
+import java.io.File
 
 
 class MainActivity : AppCompatActivity(), FragmentInteractionListener {
@@ -106,15 +110,6 @@ class MainActivity : AppCompatActivity(), FragmentInteractionListener {
             } else {
                 arduino.setCalibrating(true)
             }
-            if ((it as Button).text == getString(R.string.start_calibration_point)) {
-                calibrationButton.setText(R.string.is_calibrating)
-                calibrationTimer = createCountdownTimer()
-                calibrationTimer.start()
-            } else {
-                calibrationTimer.cancel()
-                calibrationProgress.progress = 0
-                calibrationButton.setText(R.string.start_calibration_point)
-            }
         }
 
         // Watch for arduino state changes & update buttons
@@ -131,7 +126,7 @@ class MainActivity : AppCompatActivity(), FragmentInteractionListener {
                     calibrationButton.isEnabled = false
                 }
 
-                // Update calibration button text
+                // Update calibration button and start calibration timer
                 if (it.isCalibrating) {
                     calibrationButton.setText(R.string.is_calibrating)
                     calibrationTimer = createCountdownTimer()
@@ -182,6 +177,37 @@ class MainActivity : AppCompatActivity(), FragmentInteractionListener {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             R.id.action_settings -> settingsHelper.startSettingsActivity(this)
+            R.id.action_download -> {
+
+                // Ensure no new points are saved while CSV is writing
+                startButton.isEnabled = false
+                arduino.stop()
+
+                // Start CSV write
+                CsvBuilder.writeAll(this, db)
+                        .observeOn(AndroidSchedulers.mainThread())
+                        .subscribeWith(object : DisposableObserver<File>() {
+
+                            override fun onNext(success: File) {
+                                Snackbar.make(findViewById(R.id.main_view),
+                                                "CSV file was created", Snackbar.LENGTH_LONG)
+                                        .setAction(R.string.action_open_csv, {
+                                            CsvBuilder.openCsv(this@MainActivity, success)
+                                        })
+                                        .show()
+                            }
+
+                            override fun onError(e: Throwable) {
+                                Toast.makeText(applicationContext, "Sorry, CSV could not be created", Toast.LENGTH_LONG).show()
+                                Timber.e(e)
+                            }
+
+                            override fun onComplete() {
+                                startButton.isEnabled = true
+                            }
+                        })
+                return true
+            }
             else -> super.onOptionsItemSelected(item)
         }
     }
@@ -194,7 +220,9 @@ class MainActivity : AppCompatActivity(), FragmentInteractionListener {
         }
     }
 
-    private fun createCountdownTimer() : CountDownTimer {
+    private fun createCountdownTimer() : CalibrationTimer {
+        Timber.i("Creating countdown timer...")
+
         return CalibrationTimer(
                 settingsHelper.getCalibrationMillisec(),
                 1000,
@@ -208,17 +236,17 @@ class MainActivity : AppCompatActivity(), FragmentInteractionListener {
                            val button: Button)
         : CountDownTimer(millisInFuture, countDownInterval) {
 
-        val tick = ((countDownInterval/millisInFuture.toFloat())*100).toInt()
-        var i = 0
+        private val tick = ((countDownInterval/millisInFuture.toFloat())*100)
+        private var i = 0
 
         override fun onTick(millisUntilFinished: Long) {
             i++
-            bar.progress = tick*i
+            bar.progress = (tick*i).toInt()
         }
 
         override fun onFinish() {
             i++
-            bar.progress = tick*i
+            bar.progress = (tick*i).toInt()
             button.setText(R.string.stop_calibration_point)
         }
     }

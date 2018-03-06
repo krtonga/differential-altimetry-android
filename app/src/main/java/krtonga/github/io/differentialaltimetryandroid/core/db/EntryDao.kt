@@ -16,4 +16,7 @@ interface EntryDao {
 
     @Delete
     fun delete(locationEntity: ArduinoEntry)
+
+    @Query("DELETE FROM entry")
+    fun deleteAll()
 }
