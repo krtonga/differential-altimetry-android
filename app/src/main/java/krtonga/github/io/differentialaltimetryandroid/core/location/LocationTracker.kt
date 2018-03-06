@@ -52,15 +52,15 @@ class LocationTracker {
         @Retention(AnnotationRetention.SOURCE)
         annotation class Provider
 
-        const val GPS_ONLY = 0L
-        const val NETWORK_ONLY = 1L
-        const val PASSIVE_ONLY = 2L
-        const val FUSED_HIGH_ACCURACY = 3L
-        const val FUSED_BALANCED_POWER_ACCURACY = 4L
-        const val FUSED_LOW_POWER = 5L
-        const val FUSED_NO_POWER = 6L
+        const val GPS_ONLY = 0
+        const val NETWORK_ONLY = 1
+        const val PASSIVE_ONLY = 2
+        const val FUSED_HIGH_ACCURACY = 3
+        const val FUSED_BALANCED_POWER_ACCURACY = 4
+        const val FUSED_LOW_POWER = 5
+        const val FUSED_NO_POWER = 6
 
-        fun getProviderName(@Provider provider: Long) : String {
+        fun getProviderName(@Provider provider: Int) : String {
             when (provider) {
                 GPS_ONLY -> return "GPS"
                 NETWORK_ONLY -> return "NETWORK"
@@ -69,6 +69,7 @@ class LocationTracker {
                 FUSED_BALANCED_POWER_ACCURACY -> return "FUSED - balanced power"
                 FUSED_LOW_POWER -> return "FUSED - lower power"
                 FUSED_NO_POWER -> return "FUSED - no power"
+                else -> return ""
             }
             return ""
         }
@@ -81,9 +82,9 @@ class LocationTracker {
      * starts location updates.
      */
     fun startMany(context: Context, settings: LocationSettingsInterface)
-            : Map<Long, Observable<Location>> {
+            : Map<Int, Observable<Location>> {
 
-        val map = HashMap<Long, Observable<Location>>()
+        val map = HashMap<Int, Observable<Location>>()
         if (settings.isGpsProviderEnabled()) {
             map[GPS_ONLY] = start(context, GPS_ONLY, settings.getInterval())
         }
@@ -107,14 +108,14 @@ class LocationTracker {
      * Returns observable, that when subscribed to starts location updates.
      * Defaults interval to 5 seconds.
      */
-    fun start(context: Context, @Provider provider: Long): Observable<Location> {
+    fun start(context: Context, @Provider provider: Int): Observable<Location> {
         return start(context, provider, DEFAULT_INTERVAL)
     }
 
     /**
      * Returns observable, that when subscribed to starts location updates.
      */
-    fun start(context: Context, @Provider provider: Long, interval: Long): Observable<Location> {
+    fun start(context: Context, @Provider provider: Int, interval: Long): Observable<Location> {
         when (provider) {
             GPS_ONLY ->
                 return wrapLocationManagerUpdates(context, LocationManager.GPS_PROVIDER, interval)

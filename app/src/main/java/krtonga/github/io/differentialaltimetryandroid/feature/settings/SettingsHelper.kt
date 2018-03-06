@@ -24,7 +24,7 @@ class SettingsHelper(val sharedPreferences: SharedPreferences, val resources: Re
     }
 
     @LocationTracker.Companion.Provider
-    fun getCurrentProvider() : Long {
+    fun getCurrentProvider() : Int {
         val providerKey = sharedPreferences.getString(resources.getString(R.string.pref_key_provider), "")
         when (providerKey) {
             resources.getString(R.string.pref_key_gps_only) -> return GPS_ONLY
@@ -96,9 +96,9 @@ class SettingsHelper(val sharedPreferences: SharedPreferences, val resources: Re
                 resources.getString(R.string.pref_interval_default)).toLong() * 1000
     }
 
-    override fun getFusedProviderPriority(): Long {
+    override fun getFusedProviderPriority(): Int {
         return sharedPreferences.getString(
-                resources.getString(R.string.pref_key_fused_priority), "3").toLong()
+                resources.getString(R.string.pref_key_fused_priority), "3").toInt()
     }
 
     override fun getAccuracy(): Float {

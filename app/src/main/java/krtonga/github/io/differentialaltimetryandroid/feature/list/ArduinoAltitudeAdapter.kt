@@ -19,11 +19,12 @@ class ArduinoAltitudeAdapter(
 ) : RecyclerView.Adapter<ArduinoAltitudeAdapter.ViewHolder>() {
 
     companion object {
+
         private const val HEADER_TYPE = 0
         private const val ITEM_TYPE = 1
     }
 
-    override fun onCreateViewHolder(parent: ViewGroup?, viewType: Int): ViewHolder {
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val layout = if (viewType == HEADER_TYPE)
             R.layout.item_arduino_header else R.layout.item_arduino_reading
 
@@ -39,7 +40,7 @@ class ArduinoAltitudeAdapter(
         return if (position == 0) HEADER_TYPE else ITEM_TYPE
     }
 
-    override fun onBindViewHolder(holder: ViewHolder?, position: Int) {
+    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         if (getItemViewType(position) == HEADER_TYPE) {
             return
         }

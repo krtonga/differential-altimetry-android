@@ -10,7 +10,7 @@ interface LocationSettingsInterface {
     fun isFusedProviderEnabled() : Boolean
     fun getFusedProviderInterval() : Long
     @LocationTracker.Companion.Provider
-    fun getFusedProviderPriority() : Long
+    fun getFusedProviderPriority() : Int
 
     fun getAccuracy() : Float
 }
