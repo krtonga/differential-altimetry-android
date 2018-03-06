@@ -11,7 +11,7 @@ android {
     playAccountConfigs {
         defaultAccountConfig {
             serviceAccountEmail = 'kristen.tonga@gmail.com'
-            pk12File = file('key.p12')
+            pk12File = file('../key.p12')
         }
     }
     defaultConfig {
