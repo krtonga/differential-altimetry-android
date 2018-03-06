@@ -1,0 +1,36 @@
+language: android
+jdk: oraclejdk8
+env:
+  global:
+  - ANDROID_API=27
+android:
+  components:
+  - tools
+  - tools
+  - platform-tools
+  - build-tools-26.0.2
+  - android-${ANDROID_API}
+  - extra-android-m2repository
+  licenses:
+  - android-sdk-license-.+
+before_install:
+- openssl aes-256-cbc -K $encrypted_80d0334e2519_key -iv $encrypted_80d0334e2519_iv
+  -in release.keystore.enc -out release.keystore -d
+- yes | sdkmanager "platforms;android-27"
+before_cache: "-rm -f $HOME/.gradle/caches/modules-2/modules-2.lock -rm -fr $HOME/.gradle/caches/*/plugin-resolution/"
+cache:
+  directories:
+  - "$HOME/.gradle/caches/"
+  - "$HOME/.gradle/wrapper/"
+  - "$HOME/.android/build-cache"
+script:
+- "./gradlew publishApkRelease"
+
+#deploy:
+#  provider: releases
+#  skip_cleanup: true
+#  overwrite: true
+#  file_glob: true
+#  on:
+#    repo: ValCanBuild/TravisAndroidExample
+#    tags: true
