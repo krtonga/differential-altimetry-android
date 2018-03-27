@@ -1,21 +1,22 @@
 package krtonga.github.io.differentialaltimetryandroid.core.location
 
-import android.app.Activity
+import android.annotation.SuppressLint
 import android.content.Context
+import android.content.SharedPreferences
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Bundle
 import android.support.annotation.IntDef
 import android.support.v4.content.ContextCompat
+import android.support.v7.app.AppCompatActivity
 import com.google.android.gms.location.*
-import io.reactivex.Observable
-import io.reactivex.functions.Consumer
-import timber.log.Timber
-import com.google.android.gms.location.LocationResult
-import com.google.android.gms.location.LocationCallback
 import com.jakewharton.rxrelay2.BehaviorRelay
+import io.reactivex.Observable
+import io.reactivex.disposables.CompositeDisposable
+import io.reactivex.functions.Consumer
 import krtonga.github.io.differentialaltimetryandroid.core.location.permissions.RxGpsPermissions
+import timber.log.Timber
 
 /**
  * This attempts to put location logic in one place, and returns observables.
@@ -23,13 +24,17 @@ import krtonga.github.io.differentialaltimetryandroid.core.location.permissions.
  *
  * For more info see: https://developer.android.com/training/location/index.html
  */
-class LocationTracker {
+class LocationTracker(
+        private val context: Context,
+        private val settings: LocationSettingsInterface) {
 
     /**
      * This can be subscribed to to get the latest location from any provider
      */
     private val locationsRelay: BehaviorRelay<Location> = BehaviorRelay.create()
     val latestLocation = locationsRelay.hide()
+
+    private val disposables = CompositeDisposable()
 
     companion object {
         const val REQUEST_CHECK_FOR_GPS: Int = 0
@@ -38,7 +43,7 @@ class LocationTracker {
         /**
          * This is required before requesting updates.
          */
-        fun requestPermissions(activity: Activity, consumer: Consumer<Boolean>) {
+        fun requestPermissions(activity: AppCompatActivity, consumer: Consumer<Boolean>) {
             val permissions = RxGpsPermissions(activity, true)
             permissions.permissionsGranted.subscribe(consumer)
         }
@@ -60,19 +65,35 @@ class LocationTracker {
         const val FUSED_LOW_POWER = 5
         const val FUSED_NO_POWER = 6
 
-        fun getProviderName(@Provider provider: Int) : String {
-            when (provider) {
-                GPS_ONLY -> return "GPS"
-                NETWORK_ONLY -> return "NETWORK"
-                PASSIVE_ONLY -> return "PASSIVE"
-                FUSED_HIGH_ACCURACY -> return "FUSED - high accuracy"
-                FUSED_BALANCED_POWER_ACCURACY -> return "FUSED - balanced power"
-                FUSED_LOW_POWER -> return "FUSED - lower power"
-                FUSED_NO_POWER -> return "FUSED - no power"
-                else -> return ""
+        @SuppressLint("SwitchIntDef")
+        fun getProviderName(@Provider provider: Int) =
+                when (provider) {
+                    GPS_ONLY -> "GPS"
+                    NETWORK_ONLY -> "NETWORK"
+                    PASSIVE_ONLY -> "PASSIVE"
+                    FUSED_HIGH_ACCURACY -> "FUSED - high accuracy"
+                    FUSED_BALANCED_POWER_ACCURACY -> "FUSED - balanced power"
+                    FUSED_LOW_POWER -> "FUSED - lower power"
+                    FUSED_NO_POWER -> "FUSED - no power"
+                    else -> ""
+                }
+    }
+
+    init {
+        settings.addListener(SharedPreferences.OnSharedPreferenceChangeListener { prefs, key ->
+            if (disposables.size() > 0) {
+                stop()
+                start()
             }
-            return ""
-        }
+        })
+    }
+
+    fun start() {
+        disposables.add(createManyObservables().subscribe(locationsRelay))
+    }
+
+    fun stop() {
+        disposables.dispose()
     }
 
     // TODO return one observable of all providers
@@ -81,41 +102,33 @@ class LocationTracker {
      * Returns map of observables based on user settings. Each observable, when subscribed to,
      * starts location updates.
      */
-    fun startMany(context: Context, settings: LocationSettingsInterface)
-            : Map<Int, Observable<Location>> {
+    private fun createManyObservables()
+            : Observable<Location> {
 
-        val map = HashMap<Int, Observable<Location>>()
+        val list = mutableListOf<Observable<Location>>()
         if (settings.isGpsProviderEnabled()) {
-            map[GPS_ONLY] = start(context, GPS_ONLY, settings.getInterval())
+            list.add(createObservable(context, GPS_ONLY, settings.getInterval()))
         }
 
         if (settings.isNetworkProviderEnabled()) {
-            map[NETWORK_ONLY] = start(context, NETWORK_ONLY, settings.getInterval())
+            list.add(createObservable(context, NETWORK_ONLY, settings.getInterval()))
         }
 
         if (settings.isPassiveProviderEnabled()) {
-            map[PASSIVE_ONLY] = start(context, PASSIVE_ONLY, settings.getInterval())
+            list.add(createObservable(context, PASSIVE_ONLY, settings.getInterval()))
         }
 
         if (settings.isFusedProviderEnabled()) {
             val fused = settings.getFusedProviderPriority()
-            map[fused] = start(context, fused, settings.getFusedProviderInterval())
+            list.add(createObservable(context, fused, settings.getFusedProviderInterval()))
         }
-        return map
-    }
-
-    /**
-     * Returns observable, that when subscribed to starts location updates.
-     * Defaults interval to 5 seconds.
-     */
-    fun start(context: Context, @Provider provider: Int): Observable<Location> {
-        return start(context, provider, DEFAULT_INTERVAL)
+        return Observable.merge(list)
     }
 
     /**
      * Returns observable, that when subscribed to starts location updates.
      */
-    fun start(context: Context, @Provider provider: Int, interval: Long): Observable<Location> {
+    private fun createObservable(context: Context, @Provider provider: Int, interval: Long = DEFAULT_INTERVAL): Observable<Location> {
         when (provider) {
             GPS_ONLY ->
                 return wrapLocationManagerUpdates(context, LocationManager.GPS_PROVIDER, interval)
@@ -194,7 +207,6 @@ class LocationTracker {
                         override fun onLocationResult(locationResult: LocationResult?) {
                             for (location in locationResult!!.locations) {
                                 emitter.onNext(location)
-                                locationsRelay.accept(location)
                             }
                         }
                     })
@@ -219,7 +231,6 @@ class LocationTracker {
                         override fun onLocationChanged(location: Location?) {
                             if (location != null) {
                                 emitter.onNext(location)
-                                locationsRelay.accept(location)
                             }
                         }
 

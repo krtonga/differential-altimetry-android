@@ -58,13 +58,13 @@ class SettingsHelper(val sharedPreferences: SharedPreferences, val resources: Re
                 resources.getString(R.string.pref_default_arduino_interval)).toLong() * 1000
     }
 
-    fun addListener(changeListener: SharedPreferences.OnSharedPreferenceChangeListener) {
-        sharedPreferences.registerOnSharedPreferenceChangeListener(changeListener)
-    }
-
     fun mapboxStyle(): String {
         return sharedPreferences.getString(resources.getString(R.string.pref_key_mapbox_style),
                 resources.getStringArray(R.array.pref_mapbox_style_values)[0])
+    }
+
+    override fun addListener(changeListener: SharedPreferences.OnSharedPreferenceChangeListener) {
+        sharedPreferences.registerOnSharedPreferenceChangeListener(changeListener)
     }
 
     override fun isGpsProviderEnabled(): Boolean {

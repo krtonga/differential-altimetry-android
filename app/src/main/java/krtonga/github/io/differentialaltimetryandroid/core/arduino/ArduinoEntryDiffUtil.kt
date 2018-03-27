@@ -3,7 +3,6 @@ package krtonga.github.io.differentialaltimetryandroid.core.arduino
 import android.support.v7.util.DiffUtil
 import io.reactivex.Observable
 import krtonga.github.io.differentialaltimetryandroid.core.db.ArduinoEntry
-import timber.log.Timber
 
 class ArduinoEntryDiffUtil(private val oldList: List<ArduinoEntry>,
         private val newList: List<ArduinoEntry>) : DiffUtil.Callback() {
@@ -28,7 +27,6 @@ class ArduinoEntryDiffUtil(private val oldList: List<ArduinoEntry>,
 
     override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
         return newList[newItemPosition] == oldList[oldItemPosition]
-//        return true
     }
 }
 

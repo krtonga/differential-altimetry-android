@@ -8,7 +8,7 @@ import android.os.Build
 import android.os.Environment
 import com.tbruyelle.rxpermissions2.RxPermissions
 import io.reactivex.Observable
-import io.reactivex.schedulers.Schedulers
+import io.reactivex.Single
 import krtonga.github.io.differentialaltimetryandroid.core.db.AppDatabase
 import krtonga.github.io.differentialaltimetryandroid.core.db.ArduinoEntry
 import timber.log.Timber
@@ -31,40 +31,22 @@ class CsvBuilder {
          *      if error -> send ERROR: cannot read DB
          * if error -> send ERROR: no permission
          **/
-        fun writeAll(activity: Activity, database: AppDatabase): Observable<File> {
-
-            var started = false
-            return Observable.create<File>({ emitter ->
-                RxPermissions(activity)
-                        .request(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                        .subscribe({ permissionsGranted ->
-                            if (permissionsGranted) {
-                                database.entryDoa().getAll()
-                                        .subscribeOn(Schedulers.newThread())
-                                        .doOnError { error ->
-                                            emitter.onError(error)
-                                        }
-                                        .subscribe { list ->
-                                            if (!started) {
-                                                started = true
-
-                                                val file = writeToCsv(list)
-                                                if (file != null) {
-                                                    database.entryDoa().deleteAll()
-
-                                                    emitter.onNext(file)
-                                                    emitter.onComplete()
-                                                } else {
-                                                    emitter.onError(Throwable("Failed to write to file"))
-                                                }
-                                            }
-
-                                        }
-                            } else {
-                                emitter.onError(Throwable("Please grant needed permissions"))
-                            }
-                        })
-            })
+        fun writeAll(activity: Activity, database: AppDatabase): Single<File> {
+            return RxPermissions(activity)
+                    .request(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                    .singleOrError()
+                    .flatMap { granted ->
+                        if (!granted) {
+                            return@flatMap Single.error<File>(Throwable("Permission denied"))
+                        }
+                        database.entryDoa().getAll()
+                                .firstOrError()
+                                .map { list ->
+                                    val file = writeToCsv(list) ?: throw Throwable("Failed to write to file")
+                                    database.entryDoa().deleteAll()
+                                    return@map file
+                                }
+                    }
         }
 
         fun openCsv(activity: Activity, file: File) {

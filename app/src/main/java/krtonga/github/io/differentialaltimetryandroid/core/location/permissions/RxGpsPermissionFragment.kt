@@ -1,18 +1,21 @@
 package krtonga.github.io.differentialaltimetryandroid.core.location.permissions
 
 import android.app.Activity
-import android.app.Fragment
-import android.content.*
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.content.IntentSender
+import android.location.LocationManager
 import android.os.Bundle
+import android.support.v4.app.Fragment
 import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.LocationSettingsRequest
+import com.jakewharton.rxrelay2.BehaviorRelay
 import io.reactivex.Observable
-import io.reactivex.ObservableEmitter
+import io.reactivex.disposables.Disposable
 import timber.log.Timber
-import android.location.LocationManager
-import krtonga.github.io.differentialaltimetryandroid.core.location.LocationTracker
 
 
 /**
@@ -28,34 +31,35 @@ import krtonga.github.io.differentialaltimetryandroid.core.location.LocationTrac
 class RxGpsPermissionFragment : Fragment() {
 
     private val GPS_REQUEST_CODE = 32
-    private lateinit var mTurnOnGps: Observable<Boolean>
-    private var mSubscriber: ObservableEmitter<Boolean>? = null
+    private var mDisposable: Disposable? = null
+    private val gpsIsOnRelay = BehaviorRelay.create<Boolean>()
+    val gpsIsOnObservable = gpsIsOnRelay.hide().distinctUntilChanged()
 
     /**
      * This is triggered automatically when user changes whether GPS is on or off.
      **/
     private val mGpsChangeReceiver = object : GpsStatusReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            if (mSubscriber == null) {
-                return
-            }
             if (intent?.action == LocationManager.PROVIDERS_CHANGED_ACTION) {
                 val locationManager = context?.getSystemService(Context.LOCATION_SERVICE) as LocationManager
                 val isGpsEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
                 val isNetworkEnabled = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
 
-                mSubscriber?.onNext(isGpsEnabled && isNetworkEnabled)
+                gpsIsOnRelay.accept(isGpsEnabled && isNetworkEnabled)
             }
         }
     }
 
-    /**
-     * This returns an observable, which can be used to keep track of GPS changes.
-     * On subscribe, a GPS check and prompt (if necessary) is triggered.
-     **/
-    fun getGpsOnObservable(): Observable<Boolean> {
-        mTurnOnGps = Observable.create ({
-            mSubscriber = it
+    override fun onAttach(context: Context) {
+        super.onAttach(context)
+
+        // This is triggered when user changes GPS to on or off
+        context.registerReceiver(
+                mGpsChangeReceiver,
+                IntentFilter(LocationManager.PROVIDERS_CHANGED_ACTION))
+
+        // If GPS is off, this asks the user to turn it on
+        val userChangedObservable = Observable.create<Boolean> ({ emitter ->
             Timber.d("\n\nAttempting to turn on GPS...\n\n")
             val request = LocationRequest.create()
                     .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)
@@ -65,38 +69,38 @@ class RxGpsPermissionFragment : Fragment() {
                     .addLocationRequest(request)
                     .build()
             val startGpsTask = LocationServices
-                    .getSettingsClient(activity.baseContext)
+                    .getSettingsClient(context)
                     .checkLocationSettings(settingsRequest)
 
             startGpsTask.addOnSuccessListener {
-                mSubscriber?.onNext(true)
+                emitter.onNext(true)
             }.addOnFailureListener { e ->
-                        if (e is ResolvableApiException) {
-                            try {
-                                e.startResolutionForResult(activity, LocationTracker.REQUEST_CHECK_FOR_GPS)
-                            } catch (e: IntentSender.SendIntentException) {
-                                mSubscriber?.onNext(false)
-                            }
-                        }
+                if (e is ResolvableApiException) {
+                    try {
+                        startIntentSenderForResult(e.resolution.intentSender, GPS_REQUEST_CODE, null, 0, 0, 0, null)
+                    } catch (e: IntentSender.SendIntentException) {
+                        emitter.onNext(false)
                     }
+                }
+            }
         })
-        return mTurnOnGps
+
+        mDisposable = userChangedObservable.subscribe(gpsIsOnRelay)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         retainInstance = true
-        activity.registerReceiver(
-                mGpsChangeReceiver,
-                IntentFilter(LocationManager.PROVIDERS_CHANGED_ACTION))
-        Timber.d("RxGpsPermissionFragment created")
+
+        //Timber.d("RxGpsPermissionFragment created")
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        activity.unregisterReceiver(mGpsChangeReceiver)
-        mSubscriber?.onComplete()
-        mSubscriber = null
+
+        activity?.unregisterReceiver(mGpsChangeReceiver)
+        mDisposable?.dispose()
+        mDisposable = null
     }
 
     /**
@@ -105,8 +109,7 @@ class RxGpsPermissionFragment : Fragment() {
      **/
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent) {
         if (requestCode == GPS_REQUEST_CODE) {
-            mTurnOnGps
-            mSubscriber?.onNext(resultCode == Activity.RESULT_OK)
+            gpsIsOnRelay.accept(resultCode == Activity.RESULT_OK)
         }
     }
 }

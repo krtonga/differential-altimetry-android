@@ -1,8 +1,11 @@
 package krtonga.github.io.differentialaltimetryandroid.feature.shared
 
 import android.os.Bundle
+import android.os.CountDownTimer
 import android.support.design.widget.FloatingActionButton
+import android.support.design.widget.Snackbar
 import android.support.v4.app.FragmentTransaction
+import android.support.v7.app.AlertDialog
 import android.support.v7.app.AppCompatActivity
 import android.view.Menu
 import android.view.MenuItem
@@ -10,26 +13,22 @@ import android.view.View
 import android.widget.*
 import io.reactivex.Flowable
 import io.reactivex.Observable
+import io.reactivex.SingleObserver
 import io.reactivex.android.schedulers.AndroidSchedulers
-import io.reactivex.disposables.CompositeDisposable
+import io.reactivex.disposables.Disposable
 import io.reactivex.functions.Consumer
 import krtonga.github.io.differentialaltimetryandroid.AltitudeApp
 import krtonga.github.io.differentialaltimetryandroid.R
 import krtonga.github.io.differentialaltimetryandroid.core.arduino.Arduino
+import krtonga.github.io.differentialaltimetryandroid.core.arduino.ArduinoEntryBuilder
+import krtonga.github.io.differentialaltimetryandroid.core.csv.CsvBuilder
 import krtonga.github.io.differentialaltimetryandroid.core.db.AppDatabase
 import krtonga.github.io.differentialaltimetryandroid.core.db.ArduinoEntry
+import krtonga.github.io.differentialaltimetryandroid.core.location.LocationTracker
 import krtonga.github.io.differentialaltimetryandroid.feature.list.ListFragment
 import krtonga.github.io.differentialaltimetryandroid.feature.map.MapFragment
 import krtonga.github.io.differentialaltimetryandroid.feature.settings.SettingsHelper
 import timber.log.Timber
-import android.content.SharedPreferences
-import android.os.CountDownTimer
-import android.support.design.widget.Snackbar
-import android.support.v7.app.AlertDialog
-import io.reactivex.observers.DisposableObserver
-import krtonga.github.io.differentialaltimetryandroid.core.arduino.ArduinoEntryBuilder
-import krtonga.github.io.differentialaltimetryandroid.core.csv.CsvBuilder
-import krtonga.github.io.differentialaltimetryandroid.core.location.LocationTracker
 import java.io.File
 
 
@@ -51,8 +50,6 @@ class MainActivity : AppCompatActivity(), FragmentInteractionListener {
     private lateinit var db: AppDatabase
     private lateinit var entryBuilder: ArduinoEntryBuilder
 
-    private var compositeDisposable = CompositeDisposable()
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -66,6 +63,7 @@ class MainActivity : AppCompatActivity(), FragmentInteractionListener {
 
         // Request Location permissions
         LocationTracker.requestPermissions(this, Consumer{ granted ->
+            Timber.i("In activity, permissions: granted = %s", granted)
             if (!granted) {
                 finish()
             }
@@ -83,19 +81,18 @@ class MainActivity : AppCompatActivity(), FragmentInteractionListener {
                     if (consoleScroll.visibility == View.GONE) View.VISIBLE else View.GONE
         })
 
-
-        // Hook up a button to start/stop reading from arduino
+        // Hook up a button to createObservable/stop reading from arduino
         startButton = findViewById(R.id.btn_start_arduino)
         startButton.setOnClickListener {
             if (arduino.isConnected()) {
                 // Stop location trackers
-                compositeDisposable.dispose()
+                locationTracker.stop()
                 // Stop arduino readings
                 arduino.stop()
             } else {
                 // Start all location trackers
-                startLocationUpdates()
-                // Ask user for height of arduino (start will happen in dialog)
+                locationTracker.start()
+                // Ask user for height of arduino (createObservable will happen in dialog)
                 displayHeightSelectionDialog()
             }
         }
@@ -139,16 +136,6 @@ class MainActivity : AppCompatActivity(), FragmentInteractionListener {
             }
         })
 
-        // Watch for settings change and restart location updates as necessary
-        // TODO improve this...
-        val prefChangedListener = SharedPreferences.OnSharedPreferenceChangeListener { prefs, key ->
-            if (arduino.isConnected()) {
-                compositeDisposable.dispose()
-                startLocationUpdates()
-            }
-        }
-        settingsHelper.addListener(prefChangedListener)
-
         // Show list or map
         viewToggle = findViewById(R.id.fab_view_type_toggle)
         when (UiUtils.getViewType(this)) {
@@ -186,37 +173,28 @@ class MainActivity : AppCompatActivity(), FragmentInteractionListener {
                 // Start CSV write
                 CsvBuilder.writeAll(this, db)
                         .observeOn(AndroidSchedulers.mainThread())
-                        .subscribeWith(object : DisposableObserver<File>() {
-
-                            override fun onNext(success: File) {
+                        .subscribe(object : SingleObserver<File> {
+                            override fun onSuccess(success: File) {
                                 Snackbar.make(findViewById(R.id.main_view),
                                                 "CSV file was created", Snackbar.LENGTH_LONG)
                                         .setAction(R.string.action_open_csv, {
                                             CsvBuilder.openCsv(this@MainActivity, success)
                                         })
                                         .show()
+                                startButton.isEnabled = true
                             }
 
                             override fun onError(e: Throwable) {
                                 Toast.makeText(applicationContext, "Sorry, CSV could not be created", Toast.LENGTH_LONG).show()
                                 Timber.e(e)
-                            }
-
-                            override fun onComplete() {
                                 startButton.isEnabled = true
                             }
+
+                            override fun onSubscribe(d: Disposable) { }
                         })
                 return true
             }
             else -> super.onOptionsItemSelected(item)
-        }
-    }
-
-    private fun startLocationUpdates() {
-        for (tracker in locationTracker.startMany(this, settingsHelper)) {
-            val disposable = tracker.value
-                    .subscribe()
-            compositeDisposable.add(disposable)
         }
     }
 

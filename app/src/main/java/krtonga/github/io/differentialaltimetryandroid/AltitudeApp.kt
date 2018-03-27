@@ -29,7 +29,7 @@ class AltitudeApp : Application() {
 
     val entryBuilder by lazy { ArduinoEntryBuilder(database, locationTracker.latestLocation) }
 
-    val locationTracker by lazy { LocationTracker() }
+    val locationTracker by lazy { LocationTracker(applicationContext, settingsHelper) }
 
     val database by lazy {
         Room.databaseBuilder(this, AppDatabase::class.java, "diff-altimetry-db")

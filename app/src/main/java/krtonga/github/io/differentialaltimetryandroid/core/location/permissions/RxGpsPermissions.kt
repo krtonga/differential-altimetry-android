@@ -1,9 +1,9 @@
 package krtonga.github.io.differentialaltimetryandroid.core.location.permissions
 
-import android.app.Activity
-import android.app.Fragment
-import com.jakewharton.rxrelay2.PublishRelay
+import android.support.v4.app.Fragment
+import android.support.v7.app.AppCompatActivity
 import com.tbruyelle.rxpermissions2.RxPermissions
+import io.reactivex.Observable
 import timber.log.Timber
 
 /**
@@ -21,23 +21,8 @@ import timber.log.Timber
  *  <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
  *  <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
  **/
-class RxGpsPermissions(activity: Activity, gpsRequired: Boolean) {
+class RxGpsPermissions(activity: AppCompatActivity, gpsRequired: Boolean) {
 
-    /**
-     * Relay is like a subject, but can never terminate (no onError or onComplete, only onNext)
-     * Hiding a relay makes it read only (and returns an observable)
-     *
-     * When this relay is subscribed to, it checks for location permissions.
-     * It can be used to watch for Permission Status changes.
-     */
-    private val relay = PublishRelay.create<Boolean>()
-
-    val permissionsGranted = relay
-            .hide()
-            .doOnSubscribe {
-                Timber.d("Subscribed to permission changes...")
-                request(activity, gpsRequired)
-            }
     /**
      * A retain fragment is added to the activity, and used for GPS permission callbacks.
      */
@@ -46,29 +31,27 @@ class RxGpsPermissions(activity: Activity, gpsRequired: Boolean) {
         getRxPermissionsFragment(activity)
     }
 
-    private fun request(activity: Activity, gpsRequired: Boolean) {
+    val permissionsGranted: Observable<Boolean> =
         RxPermissions(activity)
                 .request(android.Manifest.permission.ACCESS_FINE_LOCATION)
-                .subscribe({ granted ->
+                .flatMap { granted ->
+                    Timber.i("RxPermissions FINE_LOCATION: granted = %s", granted)
                     if (granted) {
                         if (gpsRequired) {
-                            val gpsObserver = mGpsPermissionsFragment.getGpsOnObservable()
-                            gpsObserver.subscribe {
-                                relay.accept(it)
-                            }
+                            return@flatMap mGpsPermissionsFragment.gpsIsOnObservable
+                        } else {
+                            Observable.just(true)
                         }
                     } else {
-                        request(activity, gpsRequired)
-                        relay.accept(false)
+                        Observable.just(false)
                     }
-                })
-    }
+                }
 
-    private fun getRxPermissionsFragment(activity: Activity) : RxGpsPermissionFragment {
+    private fun getRxPermissionsFragment(activity: AppCompatActivity) : RxGpsPermissionFragment {
         var fragment = findRxPermissionsFragment(activity)
         if (fragment == null) {
             fragment = RxGpsPermissionFragment()
-            val fragManager = activity.fragmentManager
+            val fragManager = activity.supportFragmentManager
             fragManager.beginTransaction()
                     .add(fragment, FRAG_TAG)
                     .commitAllowingStateLoss()
@@ -77,7 +60,7 @@ class RxGpsPermissions(activity: Activity, gpsRequired: Boolean) {
         return fragment as RxGpsPermissionFragment
     }
 
-    private fun findRxPermissionsFragment(activity: Activity) : Fragment? {
-        return activity.fragmentManager.findFragmentByTag(FRAG_TAG)
+    private fun findRxPermissionsFragment(activity: AppCompatActivity) : Fragment? {
+        return activity.supportFragmentManager.findFragmentByTag(FRAG_TAG)
     }
 }
