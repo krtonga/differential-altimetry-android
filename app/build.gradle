@@ -10,15 +10,15 @@ android {
     compileSdkVersion 27
     playAccountConfigs {
         defaultAccountConfig {
-            serviceAccountEmail = 'kristen.tonga@gmail.com'
-            pk12File = file('../key.p12')
+            serviceAccountEmail = System.getenv('play_email')
+            pk12File = file('key.p12')
         }
     }
     defaultConfig {
         applicationId "krtonga.github.io.differentialaltimetryandroid"
         minSdkVersion 16
         targetSdkVersion 27
-        versionCode 4
+        versionCode 5
         versionName "0.3"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
 
