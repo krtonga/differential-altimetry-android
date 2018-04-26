@@ -3,7 +3,6 @@ package krtonga.github.io.differentialaltimetryandroid.core.csv
 import android.app.Activity
 import android.content.Intent
 import android.content.Intent.ACTION_VIEW
-import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import com.tbruyelle.rxpermissions2.RxPermissions
@@ -15,6 +14,11 @@ import timber.log.Timber
 import java.io.File
 import java.io.PrintWriter
 import java.util.*
+import android.support.v4.content.FileProvider.getUriForFile
+
+
+
+
 
 class CsvBuilder {
 
@@ -50,9 +54,13 @@ class CsvBuilder {
         }
 
         fun openCsv(activity: Activity, file: File) {
+            val contentUri = getUriForFile(activity.applicationContext,
+                    "krtonga.github.io.differentialaltimetryandroid.fileprovider",
+                    file)
             val intent = Intent()
             intent.action = ACTION_VIEW
-            intent.setDataAndType(Uri.fromFile(file), "text/csv")
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            intent.setDataAndType(contentUri, "text/csv")
             activity.startActivity(intent)
         }
 
