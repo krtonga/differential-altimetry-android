@@ -7,7 +7,7 @@ import android.arch.persistence.room.migration.Migration
 
 
 
-@Database(entities = arrayOf(ArduinoEntry::class), version = 3)
+@Database(entities = arrayOf(ArduinoEntry::class), version = 4)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun entryDoa(): EntryDao
@@ -19,6 +19,17 @@ abstract class AppDatabase : RoomDatabase() {
                 database.execSQL("ALTER TABLE entry " +
                         "ADD COLUMN isCalibration INTEGER NOT NULL CONSTRAINT start_false DEFAULT 0, " +
                         "ADD COLUMN height FLOAT")
+            }
+        }
+
+        var MIGRATION_2_4: Migration = object : Migration(2, 4) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE entry " +
+                        "ADD COLUMN arTemperatureSD FLOAT, " +
+                        "ADD COLUMN arPressureSD FLOAT, " +
+                        "ADD COLUMN arElevationSD FLOAT, " +
+                        "ADD COLUMN arHitLimit INTEGER, " +
+                        "ADD COLUMN arSampleCount INTEGER")
             }
         }
     }

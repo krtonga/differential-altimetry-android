@@ -79,17 +79,24 @@ class ArduinoEntryBuilder(private val db: AppDatabase,
         nextReading.setLength(0)
     }
 
+    // Temperature (C), Pressure (Pa), Elevation (m), Temp. stdev [C], Pres. stdev [Pa], Elev. stdev [m], flag, sample count [-]
+    // 33.07, 101015.95, 0.00, 0.01, 4.00, 0.00, 0, 170
     private fun isValidReading(reading: String): Boolean {
         // ensures that line is constructed of 3 comma delimited +/- floats
-        return reading.trim().matches(Regex("-*\\d+.\\d{2},.-*\\d+.\\d{2},.-*\\d+.\\d{2}"))
+        return reading.trim().matches(Regex("(-*\\d+.\\d{2}, ){6}\\d, \\d+"))
     }
 
     private fun addDBEntry(reading: String, location: Location): ArduinoEntry {
         val entryArray: List<String> = reading.split(",")
 
         val entry = ArduinoEntry(arTemperature = entryArray[0].toFloat(),
-                arPressure = entryArray[1].toFloat(),
-                arAltitude = entryArray[2].toFloat(),
+                arPressure = entryArray[1].trim().toFloat(),
+                arAltitude = entryArray[2].trim().toFloat(),
+                arTemperatureSD = entryArray[3].trim().toFloat(),
+                arPressureSD = entryArray[4].trim().toFloat(),
+                arElevationSD = entryArray[5].trim().toFloat(),
+                arHitLimit = entryArray[6].trim().toInt(),
+                arSampleCount = entryArray[7].trim().toInt(),
                 location = location,
                 isCalibration = isCalibration,
                 height = height)

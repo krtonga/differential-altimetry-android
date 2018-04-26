@@ -12,6 +12,10 @@ import org.junit.Assert.*
  * See [testing documentation](http://d.android.com/tools/testing).
  */
 class ParseArduinoTest {
+    // TODO Update this...
+    // Temperature (C), Pressure (Pa), Elevation (m), Temp. stdev [C], Pres. stdev [Pa], Elev. stdev [m], flag, sample count [-]
+    // 33.07, 101015.95, 0.00, 0.01, 4.00, 0.00, 0, 170
+
     @Test
     fun arduino_canBeParsed() {
 //        val sampleString = "28.68, 101903.62, -73.11"
@@ -46,7 +50,7 @@ class ParseArduinoTest {
 
     fun checkSplitter(byteString: String) : ArrayList<String> {
         val nextReading = StringBuilder()
-        var entries: ArrayList<String> = ArrayList()
+        val entries: ArrayList<String> = ArrayList()
 
         if (byteString.contains("\n")) {
             val splitAtNewline = byteString.split("\n")
@@ -62,7 +66,7 @@ class ParseArduinoTest {
         } else {
             nextReading.append(byteString)
         }
-        return entries;
+        return entries
     }
 
     private fun splitAndCount(str: String, count: Int) {

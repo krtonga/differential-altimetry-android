@@ -28,7 +28,7 @@ class ArduinoAltitudeAdapter(
         val layout = if (viewType == HEADER_TYPE)
             R.layout.item_arduino_header else R.layout.item_arduino_reading
 
-        val v = LayoutInflater.from(parent!!.context).inflate(layout, parent, false)
+        val v = LayoutInflater.from(parent.context).inflate(layout, parent, false)
         return ViewHolder(v)
     }
 
@@ -46,11 +46,19 @@ class ArduinoAltitudeAdapter(
         }
 
         val entry: ArduinoEntry = dataset[position - 1]
-        val context = holder?.dateColumn!!.context
+        val context = holder.dateColumn.context
 
         val date = DateFormat.format(context.getString(R.string.col_date_format), Date(entry.time))
         holder.dateColumn.text = date
-        holder.arduinoColumn.text = context.getString(R.string.col_arduino, entry.arTemperature.toString(), entry.arPressure.toString(), entry.arAltitude.toString())
+        holder.arduinoColumn.text = context.getString(R.string.col_arduino,
+                entry.arTemperature.toString(),
+                entry.arPressure.toString(),
+                entry.arAltitude.toString(),
+                entry.arTemperatureSD.toString(),
+                entry.arPressureSD.toString(),
+                entry.arElevationSD.toString(),
+                entry.arHitLimit.toString(),
+                entry.arSampleCount.toString())
         holder.gpsColumn.text = context.getString(R.string.col_gps,
                 entry.latitude.toString(),
                 entry.longitude.toString(),
