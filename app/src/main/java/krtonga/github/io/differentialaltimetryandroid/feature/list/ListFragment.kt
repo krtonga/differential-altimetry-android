@@ -39,6 +39,7 @@ class ListFragment : ArduinoDataFragment() {
                         // Use diff util to only update where needed
                         (readingsRv.adapter as ArduinoAltitudeAdapter).updateEntries(list)
                     }
+                    readingsRv.scrollToPosition(list.size - 1)
                 })
 
         return readingsRv

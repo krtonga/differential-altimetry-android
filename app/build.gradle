@@ -18,8 +18,8 @@ android {
         applicationId "krtonga.github.io.differentialaltimetryandroid"
         minSdkVersion 16
         targetSdkVersion 27
-        versionCode 6
-        versionName "0.4"
+        versionCode 7
+        versionName "0.4.1"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
 
         playAccountConfig = playAccountConfigs.defaultAccountConfig
