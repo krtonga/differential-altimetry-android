@@ -11,12 +11,11 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.widget.*
-import io.reactivex.Flowable
-import io.reactivex.Observable
-import io.reactivex.SingleObserver
+import io.reactivex.*
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.Disposable
 import io.reactivex.functions.Consumer
+import io.reactivex.schedulers.Schedulers
 import krtonga.github.io.differentialaltimetryandroid.AltitudeApp
 import krtonga.github.io.differentialaltimetryandroid.R
 import krtonga.github.io.differentialaltimetryandroid.core.arduino.Arduino
@@ -192,6 +191,23 @@ class MainActivity : AppCompatActivity(), FragmentInteractionListener {
 
                             override fun onSubscribe(d: Disposable) { }
                         })
+                return true
+            }
+            R.id.action_delete -> {
+
+                // Ensure no new points are saved while deleting entries
+                startButton.isEnabled = false
+                arduino.stop()
+
+                // Delete all entries
+                Observable.just(true)
+                        .doOnSubscribe { db.entryDoa().deleteAll() }
+                        .subscribeOn(Schedulers.io())
+                        .observeOn(AndroidSchedulers.mainThread())
+                        .subscribe({
+                            startButton.isEnabled = true
+                        })
+
                 return true
             }
             else -> super.onOptionsItemSelected(item)

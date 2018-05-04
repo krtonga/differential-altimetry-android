@@ -29,7 +29,7 @@ class ListFragment : ArduinoDataFragment() {
 
         // Hook up list to populate based on db entries
         mListener?.getListObservable()!!
-                .subscribeOn(Schedulers.newThread())
+                .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe({ list ->
                     // If initial load, create adapter

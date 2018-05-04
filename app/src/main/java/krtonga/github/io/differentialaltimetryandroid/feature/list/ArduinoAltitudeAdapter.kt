@@ -68,7 +68,7 @@ class ArduinoAltitudeAdapter(
 
     fun updateEntries(newList: List<ArduinoEntry>) {
         ArduinoEntryDiffUtil.compare(dataset, newList)
-                .subscribeOn(Schedulers.newThread())
+                .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe({ result ->
                     dataset = newList

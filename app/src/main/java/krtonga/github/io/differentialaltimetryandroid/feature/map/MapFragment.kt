@@ -54,7 +54,7 @@ class MapFragment : ArduinoDataFragment(), ListUpdateCallback {
                                 }
                             } else {
                                 ArduinoEntryDiffUtil.compare(oldList, list)
-                                        .subscribeOn(Schedulers.newThread())
+                                        .subscribeOn(Schedulers.io())
                                         .observeOn(AndroidSchedulers.mainThread())
                                         .subscribe({
                                             if (isAttached()) {
