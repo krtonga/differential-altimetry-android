@@ -1,6 +1,7 @@
 package krtonga.github.io.differentialaltimetryandroid.core.csv
 
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.content.Intent.ACTION_VIEW
 import android.os.Build
@@ -15,9 +16,9 @@ import java.io.File
 import java.io.PrintWriter
 import java.util.*
 import android.support.v4.content.FileProvider.getUriForFile
-
-
-
+import android.text.format.DateFormat
+import android.text.format.DateUtils
+import krtonga.github.io.differentialaltimetryandroid.R
 
 
 class CsvBuilder {
@@ -46,7 +47,8 @@ class CsvBuilder {
                         database.entryDoa().getAll()
                                 .firstOrError()
                                 .map { list ->
-                                    val file = writeToCsv(list) ?: throw Throwable("Failed to write to file")
+                                    val file = writeToCsv(activity.baseContext, list)
+                                            ?: throw Throwable("Failed to write to file")
                                     database.entryDoa().deleteAll()
                                     return@map file
                                 }
@@ -69,7 +71,7 @@ class CsvBuilder {
                     .request(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
         }
 
-        fun writeToCsv(entries: List<ArduinoEntry>): File? {
+        fun writeToCsv(context: Context, entries: List<ArduinoEntry>): File? {
             // check if external storage is available
             val mounted = Environment.getExternalStorageState() == Environment.MEDIA_MOUNTED
             if (!mounted) {
@@ -77,7 +79,8 @@ class CsvBuilder {
                 return null
             }
 
-            val fileName = "sensorData-" + Date().time + ".csv"
+            val humanReadableDate = DateFormat.format(context.getString(R.string.col_date_format), Date().time)
+            val fileName = "sensorData-" + humanReadableDate + ".csv"
             val file = File(getExternalStorage(), fileName)
             file.createNewFile()
 

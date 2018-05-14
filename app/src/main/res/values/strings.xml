@@ -17,6 +17,7 @@
     <string name="col_header_gps">GPS</string>
     <string name="col_date_format">MM/d/yy\nh:mm:ss</string>
     <string name="map_date_format">MM/d/yy h:mm:ss</string>
+    <string name="csv_date_format">MM/d/yy_h:mm:ss</string>
     <string name="col_arduino">tmp: %1$s\npr: %2$s\nele: %3$s\ntmpSD: %4$s\nprSD: %5$s\neleSD: %6$s\nflag: %7$s\ncount: %8$s</string>
     <string name="col_gps">lat: %1$s\nlng: %2$s\nacc: %3$s\nalt: %4$s</string>
 
