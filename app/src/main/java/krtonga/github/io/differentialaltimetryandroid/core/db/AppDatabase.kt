@@ -7,7 +7,7 @@ import android.arch.persistence.room.migration.Migration
 
 
 
-@Database(entities = arrayOf(ArduinoEntry::class), version = 4)
+@Database(entities = arrayOf(ArduinoEntry::class), version = 5)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun entryDoa(): EntryDao
@@ -30,6 +30,13 @@ abstract class AppDatabase : RoomDatabase() {
                         "ADD COLUMN arElevationSD FLOAT, " +
                         "ADD COLUMN arHitLimit INTEGER, " +
                         "ADD COLUMN arSampleCount INTEGER")
+            }
+        }
+
+        var MIGRATION_4_5: Migration = object : Migration(4, 5) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE entry " +
+                        "ADD COLUMN isSynced BOOLEAN")
             }
         }
     }

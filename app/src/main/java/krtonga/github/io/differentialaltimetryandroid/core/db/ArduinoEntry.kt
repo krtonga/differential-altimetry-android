@@ -6,55 +6,54 @@ import android.arch.persistence.room.PrimaryKey
 import android.location.Location
 import android.os.Parcel
 import android.os.Parcelable
+import krtonga.github.io.differentialaltimetryandroid.core.api.models.ApiReading
 import java.util.*
 
-@Entity(tableName = "entry")
+@Entity(tableName = ArduinoEntry.TABLE_NAME)
 data class ArduinoEntry(
         @PrimaryKey(autoGenerate = true)
-    val id: Int = 0,
+        val id: Int = 0,
+        var isSynced: Boolean = false,
 
         // From MicroController
         // Temperature (C), Pressure (Pa), Elevation (m), Temp. stdev [C], Pres. stdev [Pa], Elev. stdev [m], flag, sample count [-]
         // 33.07, 101015.95, 0.00, 0.01, 4.00, 0.00, 0, 170
-
         val arTemperature: Float,
-
         val arPressure: Float,
-
         val arAltitude: Float,
-
         var arTemperatureSD: Float,
-
         var arPressureSD: Float,
-
         var arElevationSD: Float,
-
         var arHitLimit: Int,
-
         var arSampleCount: Int,
-
 
         // From GPS
         val latitude:Double,
-
         val longitude:Double,
-
         val locAltitude:Double,
-
         val locAccuracy:Float,
-
         val locBearing:Float,
-
         val locTime: Long,
 
         // At Moment of Creation
         val time: Long = Date().time,
-
         val isCalibration: Boolean = false,
-
         val height: Float
 
 ) : Parcelable {
+
+    companion object CREATOR : Parcelable.Creator<ArduinoEntry> {
+        const val TABLE_NAME="entry"
+
+        override fun createFromParcel(parcel: Parcel): ArduinoEntry {
+            return ArduinoEntry(parcel)
+        }
+
+        override fun newArray(size: Int): Array<ArduinoEntry?> {
+            return arrayOfNulls(size)
+        }
+    }
+
     @Ignore
     constructor(arTemperature: Float,
                 arPressure: Float,
@@ -87,6 +86,7 @@ data class ArduinoEntry(
 
     constructor(parcel: Parcel) : this(
             parcel.readInt(),
+            parcel.readInt() == 1,
             parcel.readFloat(),
             parcel.readFloat(),
             parcel.readFloat(),
@@ -127,6 +127,7 @@ data class ArduinoEntry(
 
     override fun writeToParcel(parcel: Parcel, flags: Int) {
         parcel.writeInt(id)
+        parcel.writeInt(if (isSynced) 1 else 0)
         parcel.writeFloat(arTemperature)
         parcel.writeFloat(arPressure)
         parcel.writeFloat(arAltitude)
@@ -148,15 +149,5 @@ data class ArduinoEntry(
 
     override fun describeContents(): Int {
         return 0
-    }
-
-    companion object CREATOR : Parcelable.Creator<ArduinoEntry> {
-        override fun createFromParcel(parcel: Parcel): ArduinoEntry {
-            return ArduinoEntry(parcel)
-        }
-
-        override fun newArray(size: Int): Array<ArduinoEntry?> {
-            return arrayOfNulls(size)
-        }
     }
 }
