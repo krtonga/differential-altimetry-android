@@ -18,6 +18,7 @@ import io.reactivex.functions.Consumer
 import io.reactivex.schedulers.Schedulers
 import krtonga.github.io.differentialaltimetryandroid.AltitudeApp
 import krtonga.github.io.differentialaltimetryandroid.R
+import krtonga.github.io.differentialaltimetryandroid.core.api.sync.DiffAltimetrySyncAdapter
 import krtonga.github.io.differentialaltimetryandroid.core.arduino.Arduino
 import krtonga.github.io.differentialaltimetryandroid.core.arduino.ArduinoEntryBuilder
 import krtonga.github.io.differentialaltimetryandroid.core.csv.CsvBuilder
@@ -48,6 +49,7 @@ class MainActivity : AppCompatActivity(), FragmentInteractionListener {
     private lateinit var arduino: Arduino
     private lateinit var db: AppDatabase
     private lateinit var entryBuilder: ArduinoEntryBuilder
+    private lateinit var cloudSync: DiffAltimetrySyncAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -59,6 +61,7 @@ class MainActivity : AppCompatActivity(), FragmentInteractionListener {
         locationTracker = app.locationTracker
         settingsHelper = app.settingsHelper
         entryBuilder = app.entryBuilder
+        cloudSync = app.cloudSync
 
         // Request Location permissions
         LocationTracker.requestPermissions(this, Consumer{ granted ->
@@ -75,10 +78,10 @@ class MainActivity : AppCompatActivity(), FragmentInteractionListener {
         // Allow user to show/hide the console view on click
         showConsole = findViewById(R.id.btn_toggle_console)
         consoleScroll = findViewById(R.id.scrl_console)
-        showConsole.setOnClickListener({
+        showConsole.setOnClickListener {
             consoleScroll.visibility =
                     if (consoleScroll.visibility == View.GONE) View.VISIBLE else View.GONE
-        })
+        }
 
         // Hook up a button to createObservable/stop reading from arduino
         startButton = findViewById(R.id.btn_start_arduino)
@@ -109,7 +112,7 @@ class MainActivity : AppCompatActivity(), FragmentInteractionListener {
         }
 
         // Watch for arduino state changes & update buttons
-        arduino.arduinoState.subscribe({
+        arduino.arduinoState.subscribe {
             if (it != null) {
                 if (it.isConnected || it.isConnecting) {
                     startButton.setText(R.string.stop_arduino)
@@ -133,21 +136,21 @@ class MainActivity : AppCompatActivity(), FragmentInteractionListener {
                     calibrationButton.setText(R.string.start_calibration_point)
                 }
             }
-        })
+        }
 
         // Show list or map
-        viewToggle = findViewById(R.id.fab_view_type_toggle)
+        viewToggle = this.findViewById(R.id.fab_view_type_toggle)
         when (UiUtils.getViewType(this)) {
             UiUtils.TYPE_LIST -> displayListView()
             UiUtils.TYPE_MAP -> displayMap()
         }
         // Allow toggle between the two views
-        viewToggle.setOnClickListener({
+        viewToggle.setOnClickListener {
             when (UiUtils.getViewType(this)) {
                 UiUtils.TYPE_LIST -> displayMap()
                 UiUtils.TYPE_MAP -> displayListView()
             }
-        })
+        }
     }
 
     override fun onDestroy() {
@@ -176,9 +179,9 @@ class MainActivity : AppCompatActivity(), FragmentInteractionListener {
                             override fun onSuccess(success: File) {
                                 Snackbar.make(findViewById(R.id.main_view),
                                                 "CSV file was created", Snackbar.LENGTH_LONG)
-                                        .setAction(R.string.action_open_csv, {
+                                        .setAction(R.string.action_open_csv) {
                                             CsvBuilder.openCsv(this@MainActivity, success)
-                                        })
+                                        }
                                         .show()
                                 startButton.isEnabled = true
                             }
@@ -204,10 +207,22 @@ class MainActivity : AppCompatActivity(), FragmentInteractionListener {
                         .doOnSubscribe { db.entryDoa().deleteAll() }
                         .subscribeOn(Schedulers.io())
                         .observeOn(AndroidSchedulers.mainThread())
-                        .subscribe({
+                        .subscribe {
                             startButton.isEnabled = true
-                        })
+                        }
 
+                return true
+            }
+            R.id.action_upload -> {
+                cloudSync.sync().subscribe(
+                        { onNext ->
+                            Timber.d("Sync successful: %s", onNext)
+                            Toast.makeText(applicationContext, R.string.toast_sync_success, Toast.LENGTH_LONG).show()
+                        },
+                        { onError ->
+                            Timber.e(onError)
+                            Toast.makeText(applicationContext, R.string.toast_sync_error, Toast.LENGTH_LONG).show()
+                        })
                 return true
             }
             else -> super.onOptionsItemSelected(item)
@@ -256,14 +271,14 @@ class MainActivity : AppCompatActivity(), FragmentInteractionListener {
         builder.setTitle(R.string.dialog_height_title)
                 .setMessage(R.string.dialog_height_description)
                 .setView(layout)
-                .setPositiveButton(R.string.dialog_height_confirm, { _, _ ->
+                .setPositiveButton(R.string.dialog_height_confirm) { _, _ ->
 
                     val height = if (input.text.isEmpty())
                         input.hint.toString().toFloat() else input.text.toString().toFloat()
 
                     settingsHelper.saveDefaultHeight(height)
                     arduino.start(height)
-                })
+                }
         builder.show()
     }
 
@@ -297,11 +312,11 @@ class FalseLogTree(inView: TextView) : Timber.Tree() {
         // Ensure that this is only attempted on the main thread
         Observable.just(log)
                 .observeOn(AndroidSchedulers.mainThread())
-                .subscribe({
+                .subscribe {
                     log.append('\n')
                     log.append(message)
                     consoleView.text = log
-                })
+                }
     }
 
 }

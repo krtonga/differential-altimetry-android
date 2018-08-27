@@ -5,11 +5,19 @@
 
     <uses-feature android:name="android.hardware.usb.host" />
 
+    <uses-permission
+        android:name="android.permission.GET_ACCOUNTS"
+        android:maxSdkVersion="22" />
     <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.READ_SYNC_SETTINGS" />
+    <uses-permission android:name="android.permission.WRITE_SYNC_SETTINGS" />
+    <uses-permission android:name="android.permission.AUTHENTICATE_ACCOUNTS" />
+    <!--<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />-->
 
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
 
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
 
@@ -41,6 +49,33 @@
             android:name=".feature.settings.SettingsActivity"
             android:label="@string/title_activity_settings" />
 
+
+        <!--the following are used to sync to the server-->
+        <service android:name=".core.api.auth.AuthenticatorService">
+            <intent-filter>
+                <action android:name="android.accounts.AccountAuthenticator"/>
+            </intent-filter>
+            <meta-data android:name="android.accounts.AccountAuthenticator"
+                android:resource="@xml/authenticator"/>
+        </service>
+
+        <service android:name=".core.api.sync.SyncService"
+            android:exported="true"
+            android:process=":sync">
+            <intent-filter>
+                <action android:name="android.content.SyncApdapter" />
+            </intent-filter>
+            <meta-data android:name="android.content.SyncAdapter"
+                android:resource="@xml/syncadapter" />
+        </service>
+
+        <provider
+            android:name=".core.api.sync.StubProvider"
+            android:authorities="@string/content_provider"
+            android:exported="false"
+            android:syncable="true" />
+        <!--end sync-->
+
         <receiver android:name=".core.location.permissions.GpsStatusReceiver">
             <intent-filter>
                 <action android:name="android.location.PROVIDERS_CHANGED" />
@@ -54,7 +89,7 @@
 
         <provider
             android:name="android.support.v4.content.FileProvider"
-            android:authorities="krtonga.github.io.differentialaltimetryandroid.fileprovider"
+            android:authorities="@string/file_provider"
             android:exported="false"
             android:grantUriPermissions="true"
             tools:replace="android:authorities">

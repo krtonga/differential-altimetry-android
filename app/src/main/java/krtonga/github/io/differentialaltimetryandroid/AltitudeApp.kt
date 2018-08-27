@@ -6,6 +6,7 @@ import android.preference.PreferenceManager
 import com.crashlytics.android.Crashlytics
 import com.mapbox.mapboxsdk.Mapbox
 import io.fabric.sdk.android.Fabric
+import krtonga.github.io.differentialaltimetryandroid.core.api.sync.DiffAltimetrySyncAdapter
 import krtonga.github.io.differentialaltimetryandroid.core.arduino.Arduino
 import krtonga.github.io.differentialaltimetryandroid.core.arduino.ArduinoEntryBuilder
 import krtonga.github.io.differentialaltimetryandroid.core.db.AppDatabase
@@ -42,4 +43,5 @@ class AltitudeApp : Application() {
         SettingsHelper(PreferenceManager.getDefaultSharedPreferences(this), resources)
     }
 
+    val cloudSync by lazy { DiffAltimetrySyncAdapter(applicationContext, database) }
 }

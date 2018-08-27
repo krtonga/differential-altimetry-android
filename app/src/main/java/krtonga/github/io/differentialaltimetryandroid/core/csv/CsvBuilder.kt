@@ -58,7 +58,7 @@ class CsvBuilder {
 
         fun openCsv(activity: Activity, file: File) {
             val contentUri = getUriForFile(activity.applicationContext,
-                    "krtonga.github.io.differentialaltimetryandroid.fileprovider",
+                    activity.getString(R.string.file_provider),
                     file)
             val intent = Intent()
             intent.action = ACTION_VIEW
