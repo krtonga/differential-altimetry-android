@@ -19,6 +19,7 @@ import android.support.v4.content.FileProvider.getUriForFile
 import android.text.format.DateFormat
 import android.text.format.DateUtils
 import krtonga.github.io.differentialaltimetryandroid.R
+import java.text.SimpleDateFormat
 
 
 class CsvBuilder {
@@ -79,8 +80,9 @@ class CsvBuilder {
                 return null
             }
 
-            val humanReadableDate = DateFormat.format(context.getString(R.string.col_date_format), Date().time)
-            val fileName = "sensorData-" + humanReadableDate + ".csv"
+            val dateFormatter = SimpleDateFormat(context.getString(R.string.csv_date_format))
+            val humanReadableTime = dateFormatter.format(Date())
+            val fileName = "sensorData-$humanReadableTime.csv"
             val file = File(getExternalStorage(), fileName)
             file.createNewFile()
 
