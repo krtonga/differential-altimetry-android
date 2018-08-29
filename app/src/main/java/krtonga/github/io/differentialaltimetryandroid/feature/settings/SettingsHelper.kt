@@ -14,6 +14,7 @@ import krtonga.github.io.differentialaltimetryandroid.core.location.LocationTrac
 import krtonga.github.io.differentialaltimetryandroid.core.location.LocationTracker.Companion.GPS_ONLY
 import krtonga.github.io.differentialaltimetryandroid.core.location.LocationTracker.Companion.NETWORK_ONLY
 import krtonga.github.io.differentialaltimetryandroid.core.location.LocationTracker.Companion.PASSIVE_ONLY
+import java.util.*
 
 class SettingsHelper(val sharedPreferences: SharedPreferences, val resources: Resources)
     : LocationSettingsInterface {
@@ -61,6 +62,19 @@ class SettingsHelper(val sharedPreferences: SharedPreferences, val resources: Re
     fun mapboxStyle(): String {
         return sharedPreferences.getString(resources.getString(R.string.pref_key_mapbox_style),
                 resources.getStringArray(R.array.pref_mapbox_style_values)[0])
+    }
+
+    // TODO: switch to using sensor_id that comes from arduino. Also, should this be here?
+    fun getUniqueIdentifier(): String {
+        var id = sharedPreferences.getString("device_id", "")
+        if (id == "") {
+            sharedPreferences.edit().apply {
+                id = UUID.randomUUID().toString()
+                putString("device_id", id)
+                commit()
+            }
+        }
+        return id
     }
 
     override fun addListener(changeListener: SharedPreferences.OnSharedPreferenceChangeListener) {

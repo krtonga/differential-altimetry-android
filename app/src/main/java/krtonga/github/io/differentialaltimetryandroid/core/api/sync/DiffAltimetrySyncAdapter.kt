@@ -6,6 +6,7 @@ import android.content.ContentProviderClient
 import android.content.Context
 import android.content.SyncResult
 import android.os.Bundle
+import android.preference.PreferenceManager
 import io.reactivex.Observable
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.Disposable
@@ -13,6 +14,7 @@ import io.reactivex.schedulers.Schedulers
 import krtonga.github.io.differentialaltimetryandroid.BuildConfig
 import krtonga.github.io.differentialaltimetryandroid.core.api.models.ApiReading
 import krtonga.github.io.differentialaltimetryandroid.core.db.AppDatabase
+import krtonga.github.io.differentialaltimetryandroid.feature.settings.SettingsHelper
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -54,7 +56,7 @@ class DiffAltimetrySyncAdapter(context: Context, val db: AppDatabase) : Abstract
 
     var disposable: Disposable? = null
 
-    val sensorId = ApiReading.getDeviceId(context)
+    private val sensorId: String = ApiReading.getDeviceId(context)
 
     fun sync() : Observable<Boolean> {
         return Observable.just(false)
@@ -71,6 +73,7 @@ class DiffAltimetrySyncAdapter(context: Context, val db: AppDatabase) : Abstract
                         // convert into api objects
                         ApiReading.fromEntry(sensorId, entry)
                     }
+                    Timber.e("Converted: %s",converted)
                     // post to server
                     return@flatMap api.postReadings(converted) }
                 .flatMap { response ->

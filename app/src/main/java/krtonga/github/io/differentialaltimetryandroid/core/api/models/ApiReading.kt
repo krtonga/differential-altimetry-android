@@ -13,11 +13,11 @@ import timber.log.Timber
 import java.util.*
 import android.Manifest.permission
 import android.annotation.SuppressLint
+import android.preference.PreferenceManager
 import android.provider.Settings
 import java.util.jar.Manifest
 import android.provider.Settings.Secure
-
-
+import krtonga.github.io.differentialaltimetryandroid.feature.settings.SettingsHelper
 
 
 data class ApiReading(
@@ -51,10 +51,13 @@ data class ApiReading(
                     entry.arSampleCount)
         }
 
+        // TODO: switch to using sensor_id that comes from arduino
         fun getDeviceId(context: Context): String {
-            // TODO update this with arduino identifier
-            return Settings.Secure.getString(context.contentResolver,
-                    Settings.Secure.ANDROID_ID)
+//            return Settings.Secure.getString(context.contentResolver,
+//                    Settings.Secure.ANDROID_ID)
+            return SettingsHelper(
+                    PreferenceManager.getDefaultSharedPreferences(context), context.resources)
+                    .getUniqueIdentifier()
         }
     }
 
